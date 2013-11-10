@@ -57,6 +57,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
     Idv = 1.5 * Md * r**2
     Idl = 0.5 * Md * r**2
     Itot = 13.0 / 3.0 * Mc * h**2 + Mp * (h + dCM)**2
+    sigmad = self.v / self.r
 
     # TODO randomInitalization?
 
@@ -74,24 +75,13 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.step()
 
     def step(self):
-        # self.sensors = rk4(self._derivs, self.sensors, [0, self.time_step])
-        # Randlov used Euler.
-        self.sensors = euler(self._derivs, self.sensors, self.time_step)
-
-    def reset(self):
-        self.sensors = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-
-    def _derivs(self, x, t):
-    
-        # Unpack the state.
-        # -----------------
-        # This is the ODE state, which is different from the RL-state.
-        (theta, thetad, omega, omegad) = x
-
-        # Get the control actions.
+        # Unpack the state and actions.
+        # -----------------------------
+        (omega, omegad, theta, thetad, xf, yf, xb, yb) = self.sensors
         (T, d) = self.actions
 
         # TODO Add noise to the inputs, as Randlov did.
+        # d_noised += 0.04 * (0.5 - np.random.rand())
     
         # Avoid divide-by-zero, just as Randlov did.
         if theta == 0:
@@ -102,27 +92,50 @@ class Environment(pybrain.rl.environments.environment.Environment):
             rf = self.L / np.abs(np.sin(theta))
             rb = self.L / np.abs(np.tan(theta))
             rCM = np.sqrt((self.L - self.c)**2 + self.L**2 / np.tan(theta)**2)
-        phi = omega + np.arctan(d / self.h)
 
-        sigmad = self.v / self.r
+        phi = omega + np.arctan(d / self.h)
 
         # Second derivative of angular acceleration:
         omegadd = 1 / self.Itot * (self.M * self.h * self.g * np.sin(phi)
-                - np.cos(phi) * (self.Idc * sigmad * thetad
+                - np.cos(phi) * (self.Idc * self.sigmad * thetad
                     + np.sign(theta) * self.v**2 * (
                         self.Md * self.r / rf + self.Md * self.r / rb
                         + self.M * self.h / rCM)))
-        thetadd = (T - self.Idv * sigmad * omegad) / self.Idl
+        thetadd = (T - self.Idv * self.sigmad * omegad) / self.Idl
 
-        return np.array([thetad, thetadd, omegad, omegadd])
+        # Integrate using Euler's method.
+        # yt+1 = yt + yd * dt.
+        omegad += omegadd * dt
+        omega += omegad * dt
+        thetad += thetadd * dt
+        theta += theta * dt
+
+        # Handlebars can't be turned more than 80 degrees.
+        theta = np.clip(theta, -1.3963, 1.3963)
+
+        # Front wheel contact position.
+        front_temp = self.v * self.time_step / (2 * rf)
+        if front_temp > 1:
+            front_temp = np.sign(psi + theta) * 0.5 * np.pi
+        else:
+            front_temp = np.sign(psi + theta) * np.arcsin(front_temp)
+        xf += self.v * self.time_step * -np.sin(psi + theta + front_temp)
 
 
-def euler(self, deriv_fcn, x, dt):
-    # Using very rudimentary ODE integration (Euler's method):
-    # yt+1 = yt + yd * dt.
-    # This is what Randlov used. Fixed time step helps with the fact that we do
-    # not have an explicit time derivative for tyre contact points.
-    return x + deriv_fcn(x, t) * dt
+        self.sensors = (omega, omegad, theta, thetad, xf, yf, xb, yb)
+
+    def reset(self):
+        omega = 0
+        omegad = 0
+        theta = 0
+        thetad = 0
+        xf = 0
+        yf = self.L
+        xb = 0
+        yb = 0
+        self.sensors = (omega, omegad, theta, thetad, xf, yf, xb, yb)
+
+
 
 
 env = Environment()
