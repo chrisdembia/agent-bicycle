@@ -107,7 +107,7 @@ void bike(long* return_state, long* return_state2, int action,
       
      /* New position of back tyre */
     temp = v*dt/(2*rb);               
-    if (temp &gt; 1) temp = sign(psi) * pi/2;
+    if (temp > 1) temp = sign(psi) * pi/2;
     else temp = sign(psi) * asin(temp); 
     xb += v * dt * (-sin(psi + temp));
     yb += v * dt * (cos(psi + temp));
@@ -121,7 +121,7 @@ void bike(long* return_state, long* return_state2, int action,
     }
 
     temp = yf - yb;
-    if ((xf == xb) && (temp &lt; 0)) psi = pi;
+    if ((xf == xb) && (temp < 0)) psi = pi;
     else {
       if (temp > 0) psi = atan((xb-xf)/temp);
       else psi = sign(xb-xf)*(pi/2) - atan(temp/(xb-xf));
