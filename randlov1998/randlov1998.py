@@ -19,11 +19,10 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
 
     def getReward(self):
         # TODO
-        psi = np.arctan((xb - xf) / (yf - yb))
-        xfd = -self.v * np.sin(psi + theta + np.sign(psi + theta) * np.arcsin(
 
 
-
+# TODO consider moving some calculations, like psi, from the environment to the
+# task. psi seems particularly task-dependent.
 class Environment(pybrain.rl.environments.environment.Environment):
         # TODO RL-state is [theta, thetad, omega, omegad, omegadd]^T
 
@@ -59,8 +58,6 @@ class Environment(pybrain.rl.environments.environment.Environment):
     Itot = 13.0 / 3.0 * Mc * h**2 + Mp * (h + dCM)**2
     sigmad = self.v / self.r
 
-    # TODO randomInitalization?
-
     def __init__(self):
         super(Environment, self).__init__()
         self.reset()
@@ -77,12 +74,16 @@ class Environment(pybrain.rl.environments.environment.Environment):
     def step(self):
         # Unpack the state and actions.
         # -----------------------------
-        (omega, omegad, theta, thetad, xf, yf, xb, yb) = self.sensors
+        (omega, omegad, theta, thetad, xf, yf, xb, yb, psi) = self.sensors
         (T, d) = self.actions
 
+        # Process the actions.
+        # --------------------
         # TODO Add noise to the inputs, as Randlov did.
         # d_noised += 0.04 * (0.5 - np.random.rand())
-    
+
+        # Intermediate time-dependent quantities.
+        # ---------------------------------------
         # Avoid divide-by-zero, just as Randlov did.
         if theta == 0:
             rf = 1e9
@@ -95,6 +96,8 @@ class Environment(pybrain.rl.environments.environment.Environment):
 
         phi = omega + np.arctan(d / self.h)
 
+        # Equations of motion.
+        # --------------------
         # Second derivative of angular acceleration:
         omegadd = 1 / self.Itot * (self.M * self.h * self.g * np.sin(phi)
                 - np.cos(phi) * (self.Idc * self.sigmad * thetad
@@ -103,7 +106,8 @@ class Environment(pybrain.rl.environments.environment.Environment):
                         + self.M * self.h / rCM)))
         thetadd = (T - self.Idv * self.sigmad * omegad) / self.Idl
 
-        # Integrate using Euler's method.
+        # Integrate equations of motion using Euler's method.
+        # ---------------------------------------------------
         # yt+1 = yt + yd * dt.
         omegad += omegadd * dt
         omega += omegad * dt
@@ -113,16 +117,51 @@ class Environment(pybrain.rl.environments.environment.Environment):
         # Handlebars can't be turned more than 80 degrees.
         theta = np.clip(theta, -1.3963, 1.3963)
 
+        # Wheel ('tyre') contact positions.
+        # ---------------------------------
+
         # Front wheel contact position.
         front_temp = self.v * self.time_step / (2 * rf)
+        # See Randlov's code.
         if front_temp > 1:
             front_temp = np.sign(psi + theta) * 0.5 * np.pi
         else:
             front_temp = np.sign(psi + theta) * np.arcsin(front_temp)
         xf += self.v * self.time_step * -np.sin(psi + theta + front_temp)
+        yf += self.v * self.time_step * np.cos(psi + theta + front_temp)
 
+        # Rear wheel.
+        back_temp = self.v * self.time_step / (2 * rb)
+        # See Randlov's code.
+        if back_temp > 1:
+            back_temp = np.sign(psi) * 0.5 * np.pi
+        else:
+            back_temp = np.sign(psi) * np.arcsin(back_temp)
+        xb += self.v * self.time_step * -np.sin(psi + back_temp)
+        yb += self.v * self.time_step * np.cos(psi + back_temp)
 
-        self.sensors = (omega, omegad, theta, thetad, xf, yf, xb, yb)
+        # Preventing numerical drift.
+        # --------------------------
+        # Copying what Randlov did.
+        current_wheelbase = np.sqrt((xf - xb)**2 + (yf - yb)**2)
+        if np.abs(current_wheelbase - self.L) > 0.01:
+            relative_error = self.L / current_wheelbase - 1.0
+            xb += (xb - xf) * relative_error
+            yb += (yb - yf) * relative_error
+
+        # Update heading, psi.
+        # ---------------
+        delta_y = yf - yb
+        if (xf == xb) and delta_y < 0.0:
+            psi = np.pi
+        else:
+            if deltay_y < 0.0:
+                psi = np.arctan((xb - xf) / delta_y)
+            else:
+                psi = (np.sign(xb - xf) * 0.5 * np.pi
+                        - np.arctan(delta_y / (xb - xf)))
+
+        self.sensors = (omega, omegad, theta, thetad, xf, yf, xb, yb, psi)
 
     def reset(self):
         omega = 0
@@ -133,7 +172,8 @@ class Environment(pybrain.rl.environments.environment.Environment):
         yf = self.L
         xb = 0
         yb = 0
-        self.sensors = (omega, omegad, theta, thetad, xf, yf, xb, yb)
+        psi = np.arctan((xb - xf) / (yf - yb))
+        self.sensors = (omega, omegad, theta, thetad, xf, yf, xb, yb, psi)
 
 
 
