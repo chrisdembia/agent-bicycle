@@ -14,6 +14,16 @@ from pybrain.rl.learners import Reinforce
 # The agent's actions are T and d.
 
 # TODO where do we set up the generalization?
+# TODO must pass omegadd to the learner.
+# TODO the tiling might be achieved by implementing Task.getObservation.
+# TODO states and actions are converted to int's within sarsa.py, ...what does
+# this mean?
+# TODO might need to use NFQ instead of Q or Sarsa.
+# TODO NFQ might used a fix value of alpha as 0.5.
+# TODO set epsilon for epsilon-greedy learning using learner.explorer.epsilon.
+# TODO pybrain has limited examples of doing RL using continuous states and
+# value-based learners (generalizing). Then we can use ActionValueNetwork, but
+# it's not clear to me yet how this 'discretizes'/generalizes the state space.
 
 class BalanceTask(pybrain.rl.environments.EpisodicTask):
     """The rider is to simply balance the bicycle while moving with the
@@ -193,7 +203,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
         yb += self.v * self.time_step * np.cos(psi + back_temp)
 
         # Preventing numerical drift.
-        # --------------------------
+        # ---------------------------
         # Copying what Randlov did.
         current_wheelbase = np.sqrt((xf - xb)**2 + (yf - yb)**2)
         if np.abs(current_wheelbase - self.L) > 0.01:
@@ -202,7 +212,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
             yb += (yb - yf) * relative_error
 
         # Update heading, psi.
-        # ---------------
+        # --------------------
         delta_y = yf - yb
         if (xf == xb) and delta_y < 0.0:
             psi = np.pi
@@ -229,8 +239,10 @@ class Environment(pybrain.rl.environments.environment.Environment):
 
 
 task = BalanceTask()
-net = buildNetwork(TODO)
-agent = LearningAgent(net, Reinforce())
+action_value_function = buildNetwork(TODO)
+learner = QLambda(alpha=0.5, gamma=0.99, lambda=0.95)
+# TODO would prefer to use SARSALambda but it doesn't exist in pybrain (yet).
+agent = LearningAgent(action_value_function, learner)
 net.agent = agent
 experiment = EpisodicExperiment(task, agent)
 # See Randlov, 1998, fig 2 caption.
