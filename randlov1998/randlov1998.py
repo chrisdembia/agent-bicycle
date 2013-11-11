@@ -8,17 +8,61 @@ import pybrain.rl.environments.environment
 import pybrain.rl.environments
 # The agent's actions are T and d.
 
+# TODO where do we set up the generalization?
+
 class BalanceTask(pybrain.rl.environments.EpisodicTask):
+    """The rider is to simply balance the bicycle while moving with the
+    prescribed speed.
+
+    This class is heavily guided by
+    pybrain.rl.environments.cartpole.balancetask.BalanceTask.
+
+    """
+    # See Randlov's code. Paper and thesis say 12 degrees, but his code uses
+    # pi/15. These are actually equivalent.
+    #max_tilt = 12.0 * np.pi / 180.0
+    max_tilt = np.pi / 15.0
+    max_time = 1000.0 # seconds.
+
     def __init__(self, maxsteps):
         super(BalanceTask, self).__init__(self, Environment())
         self.maxsteps = maxsteps
+        # Keep track of time in case we want to end episodes based on number of
+        # time steps.
+        self.t = 0
+
+        # TODO Sensor limits to normalize the sensor readings.
+        # TODO Actor limits.
+        T_limits = (-2, 2) # Newtons.
+        d_limits = (-0.02, 0.02) # meters.
+        # None for sensor limits; does not normalize sensor values.
+        # outdim should be set to the length of the sensors vector.
+        self.setScaling([None] * self.env.outdim, [T_limits, d_limits])
+
+    def reset(self):
+        super(BalanceTask, self).reset(self)
+        self.t = 0
+
+    def performAction(self, action):
+        self.t += 1
+        super(BalanceTask, self).performAction(self, action)
 
     def isFinished(self):
-        # TODO
-        pass
+        # Criterion for ending an episode.
+        # "When the agent can balance for 1000 seconds, the task is considered
+        # learned."
+        if np.abs(self.env.getTilt()) > self.max_tilt:
+            return True
+        elapsed_time = self.env.time_step * self.t
+        if elapsed_time > self.max_time:
+            return True
+        return False
 
     def getReward(self):
-        # TODO
+        # -1 reward for falling over; no reward otherwise.
+        if np.abs(self.env.getTilt()) > self.max_tilt:
+            return -1.0
+        return 0.0
 
 
 # TODO consider moving some calculations, like psi, from the environment to the
@@ -28,7 +72,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
 
     # For superclass.
     indim = 2
-    outdim = 6
+    outdim = 9
 
     # Environment parameters.
     time_step = 0.001
@@ -63,10 +107,13 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.reset()
         self.actions = [0.0, 0.0]
         # TODO self.delay
-        
+
+    def getTilt(self):
+        return self.sensors[0]
+
     def getSensors(self):
         return asarray(self.sensors)
- 
+
     def performAction(self, actions):
         self.actions = actions
         self.step()
@@ -81,6 +128,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
         # --------------------
         # TODO Add noise to the inputs, as Randlov did.
         # d_noised += 0.04 * (0.5 - np.random.rand())
+        # Control should be trivial otherwise.
 
         # Intermediate time-dependent quantities.
         # ---------------------------------------
