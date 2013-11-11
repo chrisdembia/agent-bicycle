@@ -136,7 +136,7 @@ void bike(long* return_state, long* return_state2, int action,
   }
    
   /*-- Calculation of the reinforcement  signal --*/
-  if (fabs(omega) &gt; (pi/15)) { /* the bike has fallen over */
+  if (fabs(omega) > (pi/15)) { /* the bike has fallen over */
     *reinforcement = R1;
     /* a good place to print some info to a file or the screen */  
   } else { 
