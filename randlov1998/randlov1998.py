@@ -6,6 +6,11 @@ from scipy import asarray
 from matplotlib.mlab import rk4
 import pybrain.rl.environments.environment
 import pybrain.rl.environments
+
+from pybrain.tools.shortcuts import buildNetwork
+from pybrain.rl.agents import LearningAgent
+from pybrain.rl.learners import Reinforce
+
 # The agent's actions are T and d.
 
 # TODO where do we set up the generalization?
@@ -24,9 +29,8 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
     max_tilt = np.pi / 15.0
     max_time = 1000.0 # seconds.
 
-    def __init__(self, maxsteps):
+    def __init__(self):
         super(BalanceTask, self).__init__(self, Environment())
-        self.maxsteps = maxsteps
         # Keep track of time in case we want to end episodes based on number of
         # time steps.
         self.t = 0
@@ -224,8 +228,12 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.sensors = (omega, omegad, theta, thetad, xf, yf, xb, yb, psi)
 
 
-
-
-env = Environment()
-env.actions = [0, 0]
-env._derivs([0, 0, 0, 0], 0)
+task = BalanceTask()
+net = buildNetwork(TODO)
+agent = LearningAgent(net, Reinforce())
+net.agent = agent
+experiment = EpisodicExperiment(task, agent)
+# See Randlov, 1998, fig 2 caption.
+experiment.doEpisodes(7000)
+#env.actions = [0, 0]
+#env._derivs([0, 0, 0, 0], 0)
