@@ -147,8 +147,14 @@ class Environment(pybrain.rl.environments.environment.Environment):
             if delta_y < 0.0:
                 psi = np.arctan((xb - xf) / delta_y)
             else:
+                # TODO we inserted this ourselves:
+                delta_x = xb - xf
+                if delta_x == 0:
+                    dy_by_dx = np.sign(delta_y) * np.inf
+                else:
+                    dy_by_dx = delta_y / delta_x
                 psi = (np.sign(xb - xf) * 0.5 * np.pi
-                        - np.arctan(delta_y / (xb - xf)))
+                        - np.arctan(dy_by_dx))
 
         self.sensors = (theta, thetad, omega, omegad, omegadd,
                 xf, yf, xb, yb, psi)
