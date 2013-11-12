@@ -25,60 +25,6 @@ from pybrain.rl.learners import Reinforce
 # value-based learners (generalizing). Then we can use ActionValueNetwork, but
 # it's not clear to me yet how this 'discretizes'/generalizes the state space.
 
-class BalanceTask(pybrain.rl.environments.EpisodicTask):
-    """The rider is to simply balance the bicycle while moving with the
-    prescribed speed.
-
-    This class is heavily guided by
-    pybrain.rl.environments.cartpole.balancetask.BalanceTask.
-
-    """
-    # See Randlov's code. Paper and thesis say 12 degrees, but his code uses
-    # pi/15. These are actually equivalent.
-    #max_tilt = 12.0 * np.pi / 180.0
-    max_tilt = np.pi / 15.0
-    max_time = 1000.0 # seconds.
-
-    def __init__(self):
-        super(BalanceTask, self).__init__(self, Environment())
-        # Keep track of time in case we want to end episodes based on number of
-        # time steps.
-        self.t = 0
-
-        # TODO Sensor limits to normalize the sensor readings.
-        # TODO Actor limits.
-        T_limits = (-2, 2) # Newtons.
-        d_limits = (-0.02, 0.02) # meters.
-        # None for sensor limits; does not normalize sensor values.
-        # outdim should be set to the length of the sensors vector.
-        self.setScaling([None] * self.env.outdim, [T_limits, d_limits])
-
-    def reset(self):
-        super(BalanceTask, self).reset(self)
-        self.t = 0
-
-    def performAction(self, action):
-        self.t += 1
-        super(BalanceTask, self).performAction(self, action)
-
-    def isFinished(self):
-        # Criterion for ending an episode.
-        # "When the agent can balance for 1000 seconds, the task is considered
-        # learned."
-        if np.abs(self.env.getTilt()) > self.max_tilt:
-            return True
-        elapsed_time = self.env.time_step * self.t
-        if elapsed_time > self.max_time:
-            return True
-        return False
-
-    def getReward(self):
-        # -1 reward for falling over; no reward otherwise.
-        if np.abs(self.env.getTilt()) > self.max_tilt:
-            return -1.0
-        return 0.0
-
-
 # TODO consider moving some calculations, like psi, from the environment to the
 # task. psi seems particularly task-dependent.
 class Environment(pybrain.rl.environments.environment.Environment):
@@ -86,7 +32,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
 
     # For superclass.
     indim = 2
-    outdim = 9
+    outdim = 10
 
     # Environment parameters.
     time_step = 0.001
@@ -135,7 +81,10 @@ class Environment(pybrain.rl.environments.environment.Environment):
     def step(self):
         # Unpack the state and actions.
         # -----------------------------
-        (omega, omegad, theta, thetad, xf, yf, xb, yb, psi) = self.sensors
+        # Want to ignore the previous value of omegadd; it could only cause a
+        # bug if we assign to it.
+        (theta, thetad, omega, omegad, _,
+                xf, yf, xb, yb, psi) = self.sensors
         (T, d) = self.actions
 
         # Process the actions.
@@ -223,11 +172,13 @@ class Environment(pybrain.rl.environments.environment.Environment):
                 psi = (np.sign(xb - xf) * 0.5 * np.pi
                         - np.arctan(delta_y / (xb - xf)))
 
-        self.sensors = (omega, omegad, theta, thetad, xf, yf, xb, yb, psi)
+        self.sensors = (theta, thetad, omega, omegad, omegadd,
+                xf, yf, xb, yb, psi)
 
     def reset(self):
         omega = 0
         omegad = 0
+        omegadd = 0
         theta = 0
         thetad = 0
         xf = 0
@@ -235,17 +186,111 @@ class Environment(pybrain.rl.environments.environment.Environment):
         xb = 0
         yb = 0
         psi = np.arctan((xb - xf) / (yf - yb))
-        self.sensors = (omega, omegad, theta, thetad, xf, yf, xb, yb, psi)
+        self.sensors = (omega, omegad, omegadd, theta, thetad,
+                xf, yf, xb, yb, psi)
+
+
+class BalanceTask(pybrain.rl.environments.EpisodicTask):
+    """The rider is to simply balance the bicycle while moving with the
+    prescribed speed.
+
+    This class is heavily guided by
+    pybrain.rl.environments.cartpole.balancetask.BalanceTask.
+
+    """
+    # See Randlov's code. Paper and thesis say 12 degrees, but his code uses
+    # pi/15. These are actually equivalent.
+    #max_tilt = 12.0 * np.pi / 180.0
+    max_tilt = np.pi / 15.0
+    max_time = 1000.0 # seconds.
+
+    def __init__(self):
+        super(BalanceTask, self).__init__(self, Environment())
+        # Keep track of time in case we want to end episodes based on number of
+        # time steps.
+        self.t = 0
+
+        # TODO Sensor limits to normalize the sensor readings.
+        # TODO Actor limits.
+        T_limits = (-2, 2) # Newtons.
+        d_limits = (-0.02, 0.02) # meters.
+        # None for sensor limits; does not normalize sensor values.
+        # outdim should be set to the length of the sensors vector.
+        self.setScaling([None] * self.env.outdim, [T_limits, d_limits])
+
+    def reset(self):
+        super(BalanceTask, self).reset(self)
+        self.t = 0
+
+    def performAction(self, action):
+        """Incoming action is an int between 0 and 8. The action we provide to
+        the environment consists of a torque T in {-2 N, 0, 2 N}, and a
+        displacement d in {-.02 m, 0, 0.02 m}.
+
+        """
+        self.t += 1
+        # Map the action integer to a torque and displacement.
+        assert type(action) == int
+        # -1 for action in {0, 1, 2}, 0 for action in {3, 4, 5}, 1 for action
+        # in {6, 7, 8}
+        torque_selector = np.floor(action / 3) - 1.0
+        T = 2.0 * torque_selector
+        ## Random number in [-1, 1]:
+        #p = 2.0 * (np.random.rand() - 0.5)
+        ## Max noise is 2 cm:
+        #s = 0.02
+        # -1 for action in {0, 3, 6}, 0 for action in {1, 4, 7}, 1 for action
+        # in {2, 5, 8}
+        disp_selector = action % 3 - 1.0
+        d = 0.02 * disp_selector # TODO add in noise + s * p
+        super(BalanceTask, self).performAction(self, [T, d])
+
+    def getObservation(self):
+        (theta, thetad, omega, omegad, omegadd,
+                xf, yf, xb, yb, psi) = self.env.sensors
+        # TODO not calling superclass to do normalization, etc.
+        return asarray([theta, thetad, omega, omegad, omegadd])
+
+    def isFinished(self):
+        # Criterion for ending an episode.
+        # "When the agent can balance for 1000 seconds, the task is considered
+        # learned."
+        if np.abs(self.env.getTilt()) > self.max_tilt:
+            return True
+        elapsed_time = self.env.time_step * self.t
+        if elapsed_time > self.max_time:
+            return True
+        return False
+
+    def getReward(self):
+        # -1 reward for falling over; no reward otherwise.
+        if np.abs(self.env.getTilt()) > self.max_tilt:
+            return -1.0
+        return 0.0
+
+    @property
+    def indim(self):
+        return 5
+
+    @property
+    def outdim(self):
+        return 1
+
+
+class DiscretizedTask(Task):
+    (theta, thetad, omega, omegad, omegadd, xf, yf, xb, yb, psi) = self.sensors
 
 
 task = BalanceTask()
 action_value_function = buildNetwork(TODO)
+action_value_function = ActionValueNetwork(5, 9,
+        name='RandlovActionValueNetwork')
 learner = QLambda(alpha=0.5, gamma=0.99, lambda=0.95)
 # TODO would prefer to use SARSALambda but it doesn't exist in pybrain (yet).
 agent = LearningAgent(action_value_function, learner)
-net.agent = agent
+# TODO net.agent = agent
 experiment = EpisodicExperiment(task, agent)
 # See Randlov, 1998, fig 2 caption.
-experiment.doEpisodes(7000)
-#env.actions = [0, 0]
-#env._derivs([0, 0, 0, 0], 0)
+for _ in range(7000):
+    experiment.doEpisodes(1)
+    agent.learn()
