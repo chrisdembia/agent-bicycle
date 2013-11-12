@@ -37,7 +37,7 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
     # pi/15. These are actually equivalent.
     #max_tilt = 12.0 * np.pi / 180.0
     max_tilt = np.pi / 15.0
-    max_time = 1000.0 # seconds.
+    max_time = 10.0 # seconds.
 
     def __init__(self):
         super(BalanceTask, self).__init__(Environment())
@@ -126,6 +126,6 @@ agent = LearningAgent(action_value_function, learner)
 experiment = EpisodicExperiment(task, agent)
 # See Randlov, 1998, fig 2 caption.
 for i in range(7000):
-    experiment.doEpisodes(1)
-    agent.learn()
+    r = experiment.doEpisodes(1)
     print i
+    agent.learn()
