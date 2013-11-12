@@ -44,7 +44,12 @@ class Environment(pybrain.rl.environments.environment.Environment):
         super(Environment, self).__init__()
         self.reset()
         self.actions = [0.0, 0.0]
+        self.fid = open('record.txt', 'w')
+        self.fid.write('theta thetad omega omegad xf yf T d\n')
         # TODO self.delay
+
+    def __del__(self):
+        self.fid.close()
 
     def getTilt(self):
         return self.sensors[0]
@@ -64,6 +69,8 @@ class Environment(pybrain.rl.environments.environment.Environment):
         (theta, thetad, omega, omegad, _,
                 xf, yf, xb, yb, psi) = self.sensors
         (T, d) = self.actions
+        self.fid.write('%f %f %f %f %f %f %f %f\n' % (theta, thetad, omega,
+            omegad, xf, yf, T, d))
 
         # Process the actions.
         # --------------------
@@ -101,7 +108,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
         omegad += omegadd * self.time_step
         omega += omegad * self.time_step
         thetad += thetadd * self.time_step
-        theta += theta * self.time_step
+        theta += thetad * self.time_step
 
         # Handlebars can't be turned more than 80 degrees.
         theta = np.clip(theta, -1.3963, 1.3963)

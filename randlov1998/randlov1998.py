@@ -47,11 +47,11 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
 
         # TODO Sensor limits to normalize the sensor readings.
         # TODO Actor limits.
-        T_limits = (-2, 2) # Newtons.
-        d_limits = (-0.02, 0.02) # meters.
-        # None for sensor limits; does not normalize sensor values.
-        # outdim should be set to the length of the sensors vector.
-        self.setScaling([None] * self.env.outdim, [T_limits, d_limits])
+        #T_limits = (-2, 2) # Newtons.
+        #d_limits = (-0.02, 0.02) # meters.
+        ## None for sensor limits; does not normalize sensor values.
+        ## outdim should be set to the length of the sensors vector.
+        #self.setScaling([None] * self.env.outdim, [T_limits, d_limits])
 
     def reset(self):
         super(BalanceTask, self).reset()
@@ -129,3 +129,4 @@ for i in range(7000):
     r = experiment.doEpisodes(1)
     print i
     agent.learn()
+    # print agent.history.getSample(i)
