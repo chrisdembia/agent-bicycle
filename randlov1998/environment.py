@@ -178,6 +178,6 @@ class Environment(pybrain.rl.environments.environment.Environment):
         xb = 0
         yb = 0
         psi = np.arctan((xb - xf) / (yf - yb))
-        self.sensors = (omega, omegad, omegadd, theta, thetad,
+        self.sensors = (theta, thetad, omega, omegad, omegadd,
                 xf, yf, xb, yb, psi)
 
