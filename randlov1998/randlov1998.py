@@ -10,6 +10,9 @@ from pybrain.rl.agents import LearningAgent
 from pybrain.rl.experiments import EpisodicExperiment
 from pybrain.rl.learners.valuebased import NFQ, ActionValueNetwork
 
+from pybrain.tools.xml.networkwriter import NetworkWriter
+from pybrain.tools.xml.networkreader import NetworkReader
+
 from environment import Environment
 
 # The agent's actions are T and d.
@@ -132,3 +135,5 @@ for i in range(7000):
     agent.learn()
     
     # print agent.history.getSample(i)
+
+NetworkWriter.writeToFile(action_value_function, 'randlov1998_actionvaluenetwork.xml')
