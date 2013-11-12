@@ -105,10 +105,11 @@ class Environment(pybrain.rl.environments.environment.Environment):
         # Integrate equations of motion using Euler's method.
         # ---------------------------------------------------
         # yt+1 = yt + yd * dt.
-        omegad += omegadd * self.time_step
+        # Must update omega based on PREVIOUS value of omegad.
         omega += omegad * self.time_step
-        thetad += thetadd * self.time_step
+        omegad += omegadd * self.time_step
         theta += thetad * self.time_step
+        thetad += thetadd * self.time_step
 
         # Handlebars can't be turned more than 80 degrees.
         theta = np.clip(theta, -1.3963, 1.3963)
