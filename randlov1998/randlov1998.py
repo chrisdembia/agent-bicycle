@@ -2,6 +2,7 @@
 
 """
 
+import numpy as np
 from scipy import asarray
 import pybrain.rl.environments
 
@@ -37,7 +38,7 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
     # pi/15. These are actually equivalent.
     #max_tilt = 12.0 * np.pi / 180.0
     max_tilt = np.pi / 15.0
-    max_time = 10.0 # seconds.
+    max_time = 1000.0 # seconds.
 
     def __init__(self):
         super(BalanceTask, self).__init__(Environment())
@@ -82,9 +83,9 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.sensors
+                xf, yf, xb, yb, psi) = self.env.getSensors()
         # TODO not calling superclass to do normalization, etc.
-        return asarray([theta, thetad, omega, omegad, omegadd])
+        return self.env.getSensors()[0:5]
 
     def isFinished(self):
         # Criterion for ending an episode.
@@ -127,6 +128,7 @@ experiment = EpisodicExperiment(task, agent)
 # See Randlov, 1998, fig 2 caption.
 for i in range(7000):
     r = experiment.doEpisodes(1)
-    print i
+    print i, learner.explorer.epsilon
     agent.learn()
+    
     # print agent.history.getSample(i)

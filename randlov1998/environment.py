@@ -55,7 +55,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
         return self.sensors[0]
 
     def getSensors(self):
-        return asarray(self.sensors)
+        return self.sensors
 
     def performAction(self, actions):
         self.actions = actions
@@ -69,8 +69,12 @@ class Environment(pybrain.rl.environments.environment.Environment):
         (theta, thetad, omega, omegad, _,
                 xf, yf, xb, yb, psi) = self.sensors
         (T, d) = self.actions
+        if self.resetted:
+            self.fid.write('%f %f %f %f %f %f %f %f\n' % (np.nan, np.nan,
+                np.nan, np.nan, np.nan, np.nan, np.nan, np.nan))
         self.fid.write('%f %f %f %f %f %f %f %f\n' % (theta, thetad, omega,
             omegad, xf, yf, T, d))
+        self.resetted = False
 
         # Process the actions.
         # --------------------
@@ -164,20 +168,21 @@ class Environment(pybrain.rl.environments.environment.Environment):
                 psi = (np.sign(xb - xf) * 0.5 * np.pi
                         - np.arctan(dy_by_dx))
 
-        self.sensors = (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi)
+        self.sensors = np.array([theta, thetad, omega, omegad, omegadd,
+                xf, yf, xb, yb, psi])
 
     def reset(self):
+        theta = 0
+        thetad = 0
         omega = 0
         omegad = 0
         omegadd = 0
-        theta = 0
-        thetad = 0
         xf = 0
         yf = self.L
         xb = 0
         yb = 0
         psi = np.arctan((xb - xf) / (yf - yb))
-        self.sensors = (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi)
+        self.sensors = np.array([theta, thetad, omega, omegad, omegadd,
+                xf, yf, xb, yb, psi])
+        self.resetted = True
 
