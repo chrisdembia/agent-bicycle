@@ -72,16 +72,17 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
         assert round(action) == action
         # -1 for action in {0, 1, 2}, 0 for action in {3, 4, 5}, 1 for action
         # in {6, 7, 8}
-        torque_selector = np.floor(action / 3) - 1.0
-        T = 2.0 * torque_selector
+        #torque_selector = np.floor(action / 3) - 1.0
+        #T = 2.0 * torque_selector
+        T = 0
         ## Random number in [-1, 1]:
         #p = 2.0 * (np.random.rand() - 0.5)
         ## Max noise is 2 cm:
         #s = 0.02
         # -1 for action in {0, 3, 6}, 0 for action in {1, 4, 7}, 1 for action
         # in {2, 5, 8}
-        disp_selector = action % 3 - 1.0
-        d = 0.02 * disp_selector # TODO add in noise + s * p
+        #disp_selector = action / 4.0 - 1.0
+        d = 0.04 * disp_selector # TODO add in noise + s * p
         super(BalanceTask, self).performAction([T, d])
 
     def getObservation(self):
@@ -126,15 +127,19 @@ action_value_function = ActionValueNetwork(5, 9,
 learner = NFQ() # QLambda(alpha=0.5, gamma=0.99, lambda=0.95)
 # TODO would prefer to use SARSALambda but it doesn't exist in pybrain (yet).
 agent = LearningAgent(action_value_function, learner)
-learner.explorer.epsilon = 0.1
+#learner.explorer.epsilon = 0.1
 # TODO net.agent = agent
 experiment = EpisodicExperiment(task, agent)
 # See Randlov, 1998, fig 2 caption.
 for i in range(7000):
     r = experiment.doEpisodes(1)
-    print i, learner.explorer.epsilon, r
+    print i, learner.explorer.epsilon, #r
     agent.learn()
     
     # print agent.history.getSample(i)
     NetworkWriter.writeToFile(action_value_function.network, 'randlov1998_actionvaluenetwork.xml')
 
+# TODO bugs like: actions are not propagating correctly.
+# TODO visualize the neural network.
+# TODO figure out why the bike always starts off going to the right
+# TODO why does Y for the wheel not increment immediately? there's a delay

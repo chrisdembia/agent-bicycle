@@ -45,7 +45,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.reset()
         self.actions = [0.0, 0.0]
         self.fid = open('record.txt', 'w')
-        self.fid.write('theta thetad omega omegad xf yf T d\n')
+        self.fid.write('theta thetad omega omegad xb yb T d\n')
         # TODO self.delay
 
     def __del__(self):
@@ -73,7 +73,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
             self.fid.write('%f %f %f %f %f %f %f %f\n' % (np.nan, np.nan,
                 np.nan, np.nan, np.nan, np.nan, np.nan, np.nan))
         self.fid.write('%f %f %f %f %f %f %f %f\n' % (theta, thetad, omega,
-            omegad, xf, yf, T, d))
+            omegad, xb, yb, T, d))
         self.resetted = False
 
         # Process the actions.
