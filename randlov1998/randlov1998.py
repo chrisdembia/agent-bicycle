@@ -10,8 +10,8 @@ from pybrain.rl.agents import LearningAgent
 from pybrain.rl.experiments import EpisodicExperiment
 from pybrain.rl.learners.valuebased import NFQ, ActionValueNetwork
 
-from pybrain.tools.xml.networkwriter import NetworkWriter
-from pybrain.tools.xml.networkreader import NetworkReader
+from pybrain.tools.customxml.networkwriter import NetworkWriter
+from pybrain.tools.customxml.networkreader import NetworkReader
 
 from environment import Environment
 
@@ -126,14 +126,15 @@ action_value_function = ActionValueNetwork(5, 9,
 learner = NFQ() # QLambda(alpha=0.5, gamma=0.99, lambda=0.95)
 # TODO would prefer to use SARSALambda but it doesn't exist in pybrain (yet).
 agent = LearningAgent(action_value_function, learner)
+learner.explorer.epsilon = 0.1
 # TODO net.agent = agent
 experiment = EpisodicExperiment(task, agent)
 # See Randlov, 1998, fig 2 caption.
 for i in range(7000):
     r = experiment.doEpisodes(1)
-    print i, learner.explorer.epsilon
+    print i, learner.explorer.epsilon, r
     agent.learn()
     
     # print agent.history.getSample(i)
+    NetworkWriter.writeToFile(action_value_function.network, 'randlov1998_actionvaluenetwork.xml')
 
-NetworkWriter.writeToFile(action_value_function, 'randlov1998_actionvaluenetwork.xml')
