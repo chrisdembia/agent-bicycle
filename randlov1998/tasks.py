@@ -1,21 +1,9 @@
-"""Implementation of Randlov, 1998.
-
-"""
-
 import numpy as np
-from scipy import asarray
+
 import pybrain.rl.environments
-
-from pybrain.rl.agents import LearningAgent
-from pybrain.rl.experiments import EpisodicExperiment
-from pybrain.rl.learners.valuebased import NFQ, ActionValueNetwork
-
-from pybrain.tools.customxml.networkwriter import NetworkWriter
-from pybrain.tools.customxml.networkreader import NetworkReader
+from pybrain.utilities import one_to_n
 
 from environment import Environment
-
-from matplotlib import pyplot as plt
 
 # The agent's actions are T and d.
 
@@ -45,10 +33,19 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
     max_tilt = np.pi / 15.0
     max_time = 1000.0 # seconds.
 
-    def __init__(self):
+    nactions = 9
+
+    def __init__(self, butt_disturbance_amplitude=0.02):
+        """
+        Parameters
+        ----------
+        butt_disturbance_amplitude : float; optional
+            In meters.
+        """
         super(BalanceTask, self).__init__(Environment())
         # Keep track of time in case we want to end episodes based on number of
         # time steps.
+        self._butt_disturbance_amplitude = butt_disturbance_amplitude
         self.t = 0
 
         # TODO Sensor limits to normalize the sensor readings.
@@ -58,6 +55,14 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
         ## None for sensor limits; does not normalize sensor values.
         ## outdim should be set to the length of the sensors vector.
         #self.setScaling([None] * self.env.outdim, [T_limits, d_limits])
+
+    @property
+    def indim(self):
+        return 1
+
+    @property
+    def outdim(self):
+        return 5
 
     def reset(self):
         super(BalanceTask, self).reset()
@@ -76,14 +81,12 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
         # in {6, 7, 8}
         torque_selector = np.floor(action / 3.0) - 1.0
         T = 2 * torque_selector
-        ## Random number in [-1, 1]:
-        #p = 2.0 * (np.random.rand() - 0.5)
-        ## Max noise is 2 cm:
-        #s = 0.02
+        # Random number in [-1, 1]:
+        p = 2.0 * np.random.rand() - 1.0
         # -1 for action in {0, 3, 6}, 0 for action in {1, 4, 7}, 1 for action
         # in {2, 5, 8}
         disp_selector = action % 3 - 1.0
-        d = 0.02 * disp_selector # TODO add in noise + s * p
+        d = 0.02 * disp_selector + self._butt_disturbance_amplitude * p
         super(BalanceTask, self).performAction([T, d])
 
     def getObservation(self):
@@ -109,71 +112,59 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
             return -1.0
         return 0.0
 
-    @property
-    def indim(self):
-        # I'm pretty sure this is never called or used.
-        return 1
+
+class LinearFATileCoding3456BalanceTask(BalanceTask):
+    """An attempt to exactly implement Randlov's function approximation. He
+    discretized (tiled) the input space into 3456 tiles.
+
+    """
+    # From Randlov, 1998:
+    theta_bounds = np.array(
+            [-0.5 * np.pi, -1.0, -0.2, 0, 0.2, 1.0, 0.5 * np.pi])
+    thetad_bounds = np.array(
+            [-np.inf, -2.0, 0, 2.0, np.inf])
+    omega_bounds = np.array(
+            [-BalanceTask.max_tilt, -0.15, -0.06, 0, 0.06, 0.15,
+                BalanceTask.max_tilt])
+    omegad_bounds = np.array(
+            [-np.inf, -0.5, -0.25, 0, 0.25, 0.5, np.inf])
+    omegadd_bounds = np.array(
+            [-np.inf, -2.0, 0, 2.0, np.inf])
+    # http://stackoverflow.com/questions/3257619/numpy-interconversion-between-multidimensional-and-linear-indexing
+    nbins_across_dims = [
+            len(theta_bounds) - 1,
+            len(thetad_bounds) - 1,
+            len(omega_bounds) - 1,
+            len(omegad_bounds) - 1,
+            len(omegadd_bounds) - 1]
+    # This array, when dotted with the 5-dim state vector, gives a 'linear'
+    # index between 0 and 3455.
+    magic_array = np.cumprod([1] + nbins_across_dims)[:-1]
 
     @property
     def outdim(self):
-        # I'm pretty sure this is never called or used.
-        return 5
+        # Used when constructing LinearFALearner's.
+        return 3456
 
+    def getLinearIndex(self, bin_index_for_each_dim):
+        linear_index = np.dot(self.magic_array, bin_index_for_each_dim)
+        if linear_index > self.outdim:
+            print self.env.getSensors()[0:5]
+            print self.magic_array
+            print bin_index_for_each_dim
+            print linear_index
+        return linear_index
 
-#class DiscretizedActionTask(Task):
-#    (theta, thetad, omega, omegad, omegadd, xf, yf, xb, yb, psi) = self.sensors
-
-
-task = BalanceTask()
-action_value_function = ActionValueNetwork(5, 9,
-        name='RandlovActionValueNetwork')
-learner = NFQ() # QLambda(alpha=0.5, gamma=0.99, lambda=0.95)
-# TODO would prefer to use SARSALambda but it doesn't exist in pybrain (yet).
-agent = LearningAgent(action_value_function, learner)
-testagent = LearningAgent(action_value_function, None)
-#learner.explorer.epsilon = 0.1
-# TODO net.agent = agent
-experiment = EpisodicExperiment(task, agent)
-# See Randlov, 1998, fig 2 caption.
-
-plt.ion()
-plt.figure(figsize=(8, 4))
-
-performance = []
-
-for i in range(7000):
-    r = experiment.doEpisodes(1)
-    R = np.sum(r)
-    agent.learn()
-
-    #experiment.agent = testagent
-    #r = np.sum(experiment.doEpisodes(1))
-    # Plot the wheel trajectories.
-    pl.subplot(122)
-    if i > 0:
-        for L in L1:
-            L.set_color([0.8, 0.8, 0.8])
-        for L in L2:
-            L.set_color([0.8, 0.8, 0.8])
-    L1 = plt.plot(task.env.get_xfhist(), task.env.get_yfhist(), 'r')
-    L2 = plt.plot(task.env.get_xbhist(), task.env.get_ybhist(), 'b')
-    plt.axis('equal')
-    plt.draw()
-    #testagent.reset()
-    #experiment.agent = agent
-
-    print i, learner.explorer.epsilon, len(r[0])
-
-    performance.append(R)
-    pl.subplot(121)
-    plt.cla()
-    plt.plot(performance, 'o--')
-    plt.draw()
-    plt.pause(0.001)
-
-    # TODO plot wheel trajectory (two different colors for rear/front).
-    
-    # print agent.history.getSample(i)
-    if i % 10 == 0:
-        NetworkWriter.writeToFile(action_value_function.network, 'randlov1998_actionvaluenetwork_%i.xml' % i)
+    def getObservation(self):
+        (theta, thetad, omega, omegad, omegadd,
+                xf, yf, xb, yb, psi) = self.env.getSensors()
+        bin_indices = [
+                np.digitize([theta], self.theta_bounds)[0] - 1,
+                np.digitize([thetad], self.thetad_bounds)[0] - 1,
+                np.digitize([omega], self.omega_bounds)[0] - 1,
+                np.digitize([omegad], self.omegad_bounds)[0] - 1,
+                np.digitize([omegadd], self.omegadd_bounds)[0] - 1,
+                ]
+        # TODO not calling superclass to do normalization, etc.
+        return one_to_n(self.getLinearIndex(bin_indices), self.outdim)
 

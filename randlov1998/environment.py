@@ -48,6 +48,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.actions = [0.0, 0.0]
         self.fid = open('record.txt', 'w')
         self.fid.write('theta thetad omega omegad xb yb T d\n')
+        self._save_wheel_contact_trajectories = False
         # TODO self.delay
 
     def __del__(self):
@@ -75,6 +76,9 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.actions = actions
         self.step()
 
+    def saveWheelContactTrajectories(self, opt):
+        self._save_wheel_contact_trajectories = opt
+
     def step(self):
         # Unpack the state and actions.
         # -----------------------------
@@ -86,10 +90,11 @@ class Environment(pybrain.rl.environments.environment.Environment):
 
         # For recordkeeping.
         # ------------------
-        self.xfhist.append(xf)
-        self.yfhist.append(yf)
-        self.xbhist.append(xb)
-        self.ybhist.append(yb)
+        if self._save_wheel_contact_trajectories:
+            self.xfhist.append(xf)
+            self.yfhist.append(yf)
+            self.xbhist.append(xb)
+            self.ybhist.append(yb)
 
         # Process the actions.
         # --------------------

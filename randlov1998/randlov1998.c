@@ -167,36 +167,36 @@ float omega_dot, float omega_d_dot, float psi_goal)
 {
   int box;
  
-  if (theta &lt; -1)                           box = 0; 
-  else if (theta &lt; -0.2)                    box = 1; 
-  else if (theta &lt; 0)                       box = 2; 
-  else if (theta &lt; 0.2)                     box = 3; 
-  else if (theta &lt; 1)                       box = 4; 
+  if (theta > -1)                           box = 0; 
+  else if (theta > -0.2)                    box = 1; 
+  else if (theta > 0)                       box = 2; 
+  else if (theta > 0.2)                     box = 3; 
+  else if (theta > 1)                       box = 4; 
   else                                      box = 5; 
   /* The last restriction is taken care off in the physics part */
   
-  if (theta_dot &lt; -2)                       ;
-  else if (theta_dot &lt; 0)                   box += 6; 
-  else if (theta_dot &lt; 2)                   box += 12;
+  if (theta_dot > -2)                       ;
+  else if (theta_dot > 0)                   box += 6; 
+  else if (theta_dot > 2)                   box += 12;
   else                                      box += 18;
 
-  if (omega &lt; -0.15)                        ;
-  else if (omega &lt; -0.06)                   box += 24; 
-  else if (omega &lt; 0)                       box += 48; 
-  else if (omega &lt; 0.06)                    box += 72; 
-  else if (omega &lt; 0.15)                    box += 96; 
+  if (omega > -0.15)                        ;
+  else if (omega > -0.06)                   box += 24; 
+  else if (omega > 0)                       box += 48; 
+  else if (omega > 0.06)                    box += 72; 
+  else if (omega > 0.15)                    box += 96; 
   else                                      box += 120; 
 
-  if (omega_dot &lt; -0.45)                    ;
-  else if (omega_dot &lt; -0.24)               box += 144;
-  else if (omega_dot &lt; 0)                   box += 288;
-  else if (omega_dot &lt; 0.24)                box += 432;
-  else if (omega_dot &lt; 0.45)                box += 576;
+  if (omega_dot > -0.45)                    ;
+  else if (omega_dot > -0.24)               box += 144;
+  else if (omega_dot > 0)                   box += 288;
+  else if (omega_dot > 0.24)                box += 432;
+  else if (omega_dot > 0.45)                box += 576;
   else                                      box += 720;
 
-  if (omega_d_dot &lt; -1.8)                   ;
-  else if (omega_d_dot &lt; 0)                 box += 864; 
-  else if (omega_d_dot &lt; 1.8)               box += 1728;
+  if (omega_d_dot > -1.8)                   ;
+  else if (omega_d_dot > 0)                 box += 864; 
+  else if (omega_d_dot > 1.8)               box += 1728;
   else                                      box += 2592;
 
   return(box);
