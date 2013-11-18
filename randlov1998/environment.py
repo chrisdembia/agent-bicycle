@@ -55,7 +55,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.fid.close()
 
     def getTilt(self):
-        return self.sensors[0]
+        return self.sensors[2]
 
     def get_xfhist(self):
         return self.xfhist
