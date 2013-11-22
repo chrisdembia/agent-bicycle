@@ -6,12 +6,12 @@ from environment import Environment
 from tasks import BalanceTask
 from training import NFQTraining
 
-task = BalanceTask()
+task = BalanceTask(only_steer=True)
 action_value_function = ActionValueNetwork(task.outdim, task.nactions,
         name='BalanceNFQActionValueNetwork')
 learner = NFQ()
 #learner.gamma = 0.99
-learner.explorer.epsilon = 0.5
+#learner.explorer.epsilon = 0.5
 task.discount = learner.gamma
 agent = LearningAgent(action_value_function, learner)
 performance_agent = LearningAgent(action_value_function, None)
