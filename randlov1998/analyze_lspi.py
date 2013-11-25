@@ -26,11 +26,11 @@ learner.learningRateDecay = 100000
 # learning to actually happen, and fixed the bug/issue where the performance
 # agent's performance stopped improving.
 
-for idx in np.arange(0, 810, 10):
-    theta = np.loadtxt('/home/fitze/Dropbox/stanford/21quarter/229cs/proj/data/balance_lspi_experimental_112011H17M18S/theta_%i.dat' % idx)
-    learner._theta = theta
-    Q = learner._qValues(one_to_n(task.getPhi(0, 0, 0, 0, 0), task.outdim))
-    pl.plot(Q)
+for idx in np.arange(0, 2500, 100):
+theta = np.loadtxt('/home/fitze/Dropbox/stanford/21quarter/229cs/proj/data/balance_lspi_experimental_112011H17M18S/theta_%i.dat' % idx)
+learner._theta = theta
+Q = learner._qValues(one_to_n(task.getPhi(0, 0, 0, 0, 0), task.outdim))
+pl.plot(Q)
 print Q
 pl.show()
 

@@ -6,11 +6,13 @@ from tasks import LinearFATileCoding3456BalanceTask
 from training import LinearFATraining
 from learners import SARSALambda_LinFA_ReplacingTraces
 
-task = LinearFATileCoding3456BalanceTask()
+task = LinearFATileCoding3456BalanceTask(max_time=50.0)
 learner = SARSALambda_LinFA_ReplacingTraces(task.nactions, task.outdim)
 learner._lambda = 0.95
 task.discount = learner.rewardDiscount
 agent = LinearFA_Agent(learner)
+agent.epsilonGreedy = True
+agent.init_exploration = 0.3
 # The state has a huge number of dimensions, and the logging causes me to run
 # out of memory. We needn't log, since learning is done online.
 agent.logging = False
@@ -29,7 +31,7 @@ learner.learningRateDecay = 100000
 # agent's performance stopped improving.
 
 tr = LinearFATraining('balance_sarsalambda_linfa_replacetrace', experiment,
-        performance_agent, verbose=False)
+        performance_agent, verbose=True)
 
 tr.train(2000000, performance_interval=50, n_performance_episodes=5,
         serialization_interval=50)

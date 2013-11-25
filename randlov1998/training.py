@@ -1,8 +1,10 @@
 from datetime import datetime
 import getpass
 import os
+import traceback
+import shutil
 
-from numpy import mean, array_str, empty
+from numpy import mean, array_str, empty, savetxt
 from matplotlib import pyplot as plt
 
 from pybrain.tools.customxml.networkwriter import NetworkWriter
@@ -57,6 +59,7 @@ class Training:
         self.verbose = verbose
         self.name = name
 
+
         # For plotting, to grey out previous trajectories.
         self.front_lines = []
         self.back_lines = []
@@ -65,7 +68,7 @@ class Training:
         reldir = self.name + '_' + datetime.now().strftime('%m%d%HH%MM%SS')
         if 'AGENT_BICYCLE_DATA_PATH' in os.environ:
             self.outdir = os.path.join(
-                    self.outdirs.environ['AGENT_BICYCLE_DATA_PATH'], reldir)
+                    os.environ['AGENT_BICYCLE_DATA_PATH'], reldir)
         else:
             self.outdir = reldir
         if os.path.exists(self.outdir):
@@ -80,8 +83,15 @@ class Training:
             freadme.write(description)
         freadme.close()
 
+        # Save the input .py script into this directory.
+        tback = traceback.extract_stack()[-3]
+        file_that_instantiates_this_obj = tback[0]
+        shutil.copy(file_that_instantiates_this_obj, self.outdir)
+
+
     def train(self, n_max_rehearsals, do_plot=True, performance_interval=10,
-            n_performance_episodes=5, serialization_interval=10):
+            n_performance_episodes=5, serialization_interval=10,
+            n_episodes_per_rehearsal=1, plotsave_interval=100):
         """Training consists of a loop of (1) rehearsing, (2) plotting the
         reward and bicycle wheel trajectory, and (3) writing output to a file
         (including the learner; e.g., weights).
@@ -105,6 +115,14 @@ class Training:
             Number of episodes to execute in each performance.
         serialization_interval : int
             How many rehearsals should pass before writing data out to files?
+        n_episodes_per_rehearsal : int
+            Number of episodes to run in a rehearsal. May not be relevant or
+            ALL subclasses.
+        plotsave_interval : int
+            How many rehearsals should pass before saving the plot (if do_plot
+            is True) to a file. It doesn't make sense for this to be less than
+            the performance_interval; then you'd be saving multiple plots of
+            the SAME thing.
 
         """
         # TODO unless we start writing out the success metric to a file, the
@@ -113,19 +131,23 @@ class Training:
             self.exp.task.env.saveWheelContactTrajectories(True)
             plt.ion()
             plt.figure(figsize=(8, 4))
+            plt.suptitle(self.name, fontweight='bold')
 
         success_metric_history = []
-        for irehearsal in range(n_max_rehearsals):
+        irehearsal = -1
+        while irehearsal < n_max_rehearsals:
+            irehearsal += 1
             # The trailing comma prevents `print` from print a newline.
             if self.verbose:
                 print('Rehearsal %i.' % irehearsal),
 
             # Rehearse.
-            self.rehearse(irehearsal)
+            self.rehearse(irehearsal, n_episodes_per_rehearsal)
 
             # Perform.
             if irehearsal % performance_interval == 0:
-                success_metric_history.append(self.perform(n_performance_episodes))
+                success_metric_history.append(
+                        self.perform(n_performance_episodes))
                 if do_plot:
                     # Success history.
                     plt.subplot(121)
@@ -133,16 +155,18 @@ class Training:
                     plt.plot(success_metric_history, '.--')
                     # Wheel trajectories.
                     plt.subplot(122)
-                    self.update_wheel_trajectories()
+                    self._update_wheel_trajectories()
                     # Necessary (?) plotting mechanics.
                     plt.draw()
                     plt.pause(0.001)
+            if do_plot and irehearsal % plotsave_interval == 0:
+                plt.savefig(self.fullFilePath('plot_%i.png' % irehearsal))
 
             # Write learning to file.
             if irehearsal % serialization_interval == 0:
                 self.serialize(irehearsal)
 
-    def update_wheel_trajectories(self):
+    def _update_wheel_trajectories(self):
         # Grey out previous lines.
         for line in self.front_lines:
             line.set_color([0.8, 0.8, 0.8])
@@ -151,10 +175,11 @@ class Training:
         env = self.exp.task.env
         self.front_lines = plt.plot(env.get_xfhist(), env.get_yfhist(), 'r')
         self.back_lines = plt.plot(env.get_xbhist(), env.get_ybhist(), 'b')
+        #plt.plot(self.exp.task.bin_count)
         plt.axis('equal')
 
-    def perform(self, n_perform_episodes):
-        """Run `n_perform_episodes` on an agent that does NOT do any
+    def perform(self, n_performance_episodes):
+        """Run `n_performance_episodes` on an agent that does NOT do any
         exploring/learning. This is how to really test out the learned policy.
 
         Returns
@@ -172,28 +197,34 @@ class Training:
         learning_agent = self.exp.agent
         self.exp.agent = self.performance_agent
         # The old/original success metric:
-        #r = mean([sum(x) for x in self.exp.doEpisodes(n_perform_episodes)])
-        R = empty(n_perform_episodes)
-        for iep in range(n_perform_episodes):
+        #success = mean([sum(x) for x in
+        #    self.exp.doEpisodes(n_performance_episodes)])
+        R = empty(n_performance_episodes)
+        time_step_hist = empty(n_performance_episodes)
+        for iep in range(n_performance_episodes):
             r = self.exp.doEpisodes(1)
             R[iep] = self.exp.task.getTotalReward()
+            time_step_hist[iep] = self.exp.task.t
         success = mean(R)
         if self.verbose:
-            print 'PERFORMANCE: mean(R): %.2f, last nsteps: %.1f' % (
-                    success, len(r[0]))
+            #print 'PERFORMANCE: mean(R): %.2f, last nsteps: %.1f' % (
+            #        success, len(r[0]))
+            # TODO
+            print 'PERFORMANCE: Rhist:', R, 'nsteps:', time_step_hist
+
 
         self.performance_agent.reset()
         self.exp.agent = learning_agent
         return success
 
-    def rehearse(self):
+    def rehearse(self, irehearsal, n_episodes_per_rehearsal):
         """Run episodes, and ensure learning occurs. The implementation of this
         depends on the learning algorithm used.
 
         """
         abstractMethod()
 
-    def serialize(self):
+    def serialize(self, irehearsal):
         """Serialize whatever you want; probably the learner (e.g., neural
         network) though.
 
@@ -210,8 +241,8 @@ class Training:
 
 
 class NFQTraining(Training):
-    def rehearse(self, irehearsal):
-        r = self.exp.doEpisodes(1)
+    def rehearse(self, irehearsal, n_episodes_per_rehearsal):
+        r = self.exp.doEpisodes(n_episodes_per_rehearsal)
         self.exp.agent.learn()
         print 'epsilon: %.4f; nsteps: %i' % (
                 self.exp.agent.learner.explorer.epsilon, len(r[0]))
@@ -225,17 +256,18 @@ class LinearFATraining(Training):
         self.thetafile = open(self.fullFilePath('theta.dat'), 'w')
     def __del__(self):
         self.thetafile.close()
-    def rehearse(self, irehearsal):
-        r = self.exp.doEpisodes(1)
+    def rehearse(self, irehearsal, n_episodes_per_rehearsal):
+        r = self.exp.doEpisodes(n_episodes_per_rehearsal)
         # Discounted reward/return (I think):
         cumreward = self.exp.task.getTotalReward()
         if self.verbose:
             print 'cumreward: %.4f; nsteps: %i; learningRate: %.4f' % (
                     cumreward, len(r[0]), self.exp.agent.learner.learningRate)
     def serialize(self, irehearsal):
+        theta = self.exp.agent.learner._theta
+        savetxt(self.fullFilePath('theta_%i.dat' % irehearsal), theta)
         #flattheta = self.exp.agent.learner._theta.flatten()
         #flatthetastr = array_str(flattheta).replace('[', '').replace(']', '')
         #self.thetafile.write('%i %s' % (irehearsal, flatthetastr))
         # TODO
-        pass
 

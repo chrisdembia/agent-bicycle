@@ -15,7 +15,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
     outdim = 10
 
     # Environment parameters.
-    time_step = 0.02
+    time_step = 0.01
 
     # Acceleration on Earth's surface due to gravity (m/s^2):
     g = 9.82
@@ -56,6 +56,12 @@ class Environment(pybrain.rl.environments.environment.Environment):
 
     def getTilt(self):
         return self.sensors[2]
+
+    def getXF(self):
+        return self.sensors[5]
+
+    def getYF(self):
+        return self.sensors[6]
 
     def get_xfhist(self):
         return self.xfhist
@@ -130,10 +136,10 @@ class Environment(pybrain.rl.environments.environment.Environment):
         # ---------------------------------------------------
         # yt+1 = yt + yd * dt.
         # Must update omega based on PREVIOUS value of omegad.
-        omega += omegad * self.time_step
         omegad += omegadd * self.time_step
-        theta += thetad * self.time_step
+        omega += omegad * self.time_step
         thetad += thetadd * self.time_step
+        theta += thetad * self.time_step
 
         # Handlebars can't be turned more than 80 degrees.
         theta = np.clip(theta, -1.3963, 1.3963)

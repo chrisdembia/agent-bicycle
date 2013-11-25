@@ -24,7 +24,11 @@ learner.learningRateDecay = 100000
 # learning to actually happen, and fixed the bug/issue where the performance
 # agent's performance stopped improving.
 
-theta = np.loadtxt('/home/fitze/Dropbox/stanford/21quarter/229cs/proj/data/balance_sarsalambda_linfa_replacetrace_noperform_111910H15M32S/theta_339000.dat')
-learner._theta = theta
-print learner._qValues(one_to_n(task.getBin(0, 0, 0, 0, 0), task.outdim))
+for i in np.arange(2000, 3800, 50):
+    theta = np.loadtxt('/home/fitze/Documents/agent-bicycle/data/balance_sarsalambda_linfa_replacetrace_anneal_112217H56M04S/theta_%i.dat' % i)
+    learner._theta = theta
+    Q = learner._qValues(one_to_n(task.getBin(0, 0, 0, 0, 0), task.outdim))
+    pl.plot(Q, label='%s' % i)
+#pl.legend()
+pl.show()
 print learner._greedyAction(one_to_n(task.getBin(0, 0, 0, 0, 0), task.outdim))
