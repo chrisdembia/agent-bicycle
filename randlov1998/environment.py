@@ -63,6 +63,15 @@ class Environment(pybrain.rl.environments.environment.Environment):
     def getYF(self):
         return self.sensors[6]
 
+    def getXB(self):
+        return self.sensors[7]
+
+    def getYB(self):
+        return self.sensors[8]
+
+    def getPSI(self):
+        return self.sensors[9]
+
     def get_xfhist(self):
         return self.xfhist
 
@@ -214,4 +223,3 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.yfhist = []
         self.xbhist = []
         self.ybhist = []
-
