@@ -72,7 +72,7 @@ class Environment(pybrain.rl.environments.environment.Environment):
     def getYB(self):
         return self.sensors[8]
 
-    def getHeading(self):
+    def getPSI(self):
         return self.sensors[9]
 
     def get_xfhist(self):

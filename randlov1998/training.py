@@ -271,3 +271,4 @@ class LinearFATraining(Training):
         #self.thetafile.write('%i %s' % (irehearsal, flatthetastr))
         # TODO
 
+# class LinearFATraining_setAlpha(LinearFATraining):

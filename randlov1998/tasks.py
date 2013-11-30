@@ -18,7 +18,6 @@ from environment import Environment
 # TODO pybrain has limited examples of doing RL using continuous states and
 # value-based learners (generalizing). Then we can use ActionValueNetwork, but
 # it's not clear to me yet how this 'discretizes'/generalizes the state space.
-
 class BalanceTask(pybrain.rl.environments.EpisodicTask):
     """The rider is to simply balance the bicycle while moving with the
     prescribed speed.
@@ -122,6 +121,128 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
         return 0.0
 
 
+class GotoTask(BalanceTask):
+    """ The rider is to balance the bicycle while moving toward a 
+    prescribed goal 
+    """
+
+    # Goal position and raduis
+    x_goal = 20.
+    y_goal = 8.
+    r_goal = 10.
+
+    @property
+    def outdim(self):
+        return 8
+
+    def getObservation(self):
+        # let the learner know about the front tire position and 
+        # the heading.
+        (theta, thetad, omega, omegad, omegadd,
+                xf, yf, xb, yb, psi) = self.env.getSensors()
+        
+        # TODO not calling superclass to do normalization, etc.
+        return [ self.env.getSensors()[i] for i in [0, 1, 2, 3, 4, 5, 6, 9] ]
+
+    def isFinished(self):
+        # Criterion for ending an episode.
+        # When the agent reaches the goal, the task is considered learned.
+        # When the agent falls down, the episode is over.
+        dist_to_goal = self.calc_dist_to_goal()
+        heading = self.calc_angle_to_goal()
+        heading2 = self.env.getPsi()
+
+        if np.abs(self.env.getTilt()) > self.max_tilt:
+            print 'distance to goal ', dist_to_goal
+            return True
+
+        if dist_to_goal < 1e-3:
+            print 'reached goal'
+            return True
+
+        return False
+
+    def getReward(self):
+        # -1    reward for falling over
+        #  0.01 reward for close to goal
+        #  return reward inversely proportional to heading error otherwise
+
+        r_factor = 0.0001
+
+        if np.abs(self.env.getTilt()) > self.max_tilt:
+            return -1.0
+        else:
+            temp = self.calc_dist_to_goal()
+            heading = self.calc_angle_to_goal()
+            if (temp < 1e-3):
+                return 0.01
+            else:
+                return (0.95 - heading**2) * r_factor
+
+    def calc_dist_to_goal(self):
+        # ported from Randlov's C code. See bike.c for the source
+        # code.
+
+        # unpack variables
+        x_goal = self.x_goal
+        y_goal = self.y_goal
+        r_goal = self.r_goal
+        xf = self.env.getXF()
+        yf = self.env.getYF()
+
+        sqrd_dist_to_goal = ( x_goal - xf )**2 + ( y_goal -yf )**2 
+        temp = np.max([0, sqrd_dist_to_goal - r_goal**2])
+
+        # We probably don't need to actually compute a sqrt here if it
+        # helps simulation speed.
+        temp = np.sqrt(temp)
+
+        return temp
+
+    def calc_angle_to_goal(self):
+        # ported from Randlov's C code. See bike.c for the source
+        # code. 
+
+        # the following explanation of the returned angle is 
+        # verbatim from Randlov's C source:
+
+        # These angles are neither in degrees nor radians, but 
+        # something strange invented in order to save CPU-time. The 
+        # measure is arranged same way as radians, but with a 
+        # slightly different negative factor
+        #
+        # Say the goal is to the east,
+        # If the agent rides to the east then temp =  0
+        #               " "         north    " "   = -1
+        #               " "         west     " "   = -2 or 2
+        #               " "         south    " "   =  1
+        #
+        # // end quote // 
+
+        # TODO: see the psi calculation in the environment, which is not 
+        # currently being used.
+
+        # unpack variables
+        x_goal = self.x_goal
+        y_goal = self.y_goal
+        xf = self.env.getXF()
+        xb = self.env.getXB()
+        yf = self.env.getYF()
+        yb = self.env.getYB()
+
+        # implement Randlov's angle computation
+        temp = (xf - xb) * (x_goal - xf) + (yf - yb) * (y_goal - yf)
+        scalar = temp / (1 * np.sqrt( (x_goal - xf)**2 + (y_goal - yf)**2))
+        tvaer = (-yf + yb) * (x_goal - xf) + (xf - xb) * (y_goal-yf)
+
+        if tvaer <= 0 :
+            temp = scalar - 1
+        else:
+            temp = np.abs(scalar - 1)
+
+        return temp
+
+
 class LinearFATileCoding3456BalanceTask(BalanceTask):
     """An attempt to exactly implement Randlov's function approximation. He
     discretized (tiled) the input space into 3456 tiles.
@@ -221,12 +342,17 @@ class LSPIBalanceTask(BalanceTask):
                 xf, yf, xb, yb, psi) = self.env.getSensors()
         return self.getPhi(theta, thetad, omega, omegad, omegadd)
 
-
+      
 class LinearFATileCoding3456GoToTask(BalanceTask):
     """An attempt to exactly implement Randlov's function approximation. He
     discretized (tiled) the input space into 3456 tiles.
 
     """
+    # Goal position and raduis
+    x_goal = 20.
+    y_goal = 20.
+    r_goal = 10.
+
     # From Randlov, 1998:
     theta_bounds = np.array(
             [-0.5 * np.pi, -1.0, -0.2, 0, 0.2, 1.0, 0.5 * np.pi])
@@ -239,13 +365,16 @@ class LinearFATileCoding3456GoToTask(BalanceTask):
             [-np.inf, -0.5, -0.25, 0, 0.25, 0.5, np.inf])
     omegadd_bounds = np.array(
             [-np.inf, -2.0, 0, 2.0, np.inf])
+    psi_bounds = (np.pi/180) * np.array( range(0,360,18) )
+
     # http://stackoverflow.com/questions/3257619/numpy-interconversion-between-multidimensional-and-linear-indexing
-    nbins_across_dims = [
+    nbins_across_dims = [ 
             len(theta_bounds) - 1,
             len(thetad_bounds) - 1,
             len(omega_bounds) - 1,
             len(omegad_bounds) - 1,
             len(omegadd_bounds) - 1]
+
     # This array, when dotted with the 5-dim state vector, gives a 'linear'
     # index between 0 and 3455.
     magic_array = np.cumprod([1] + nbins_across_dims)[:-1]
@@ -253,7 +382,7 @@ class LinearFATileCoding3456GoToTask(BalanceTask):
     @property
     def outdim(self):
         # Used when constructing LinearFALearner's.
-        return 3456
+        return 3456 + 20
 
     def getBin(self, theta, thetad, omega, omegad, omegadd):
         bin_indices = [
@@ -264,31 +393,135 @@ class LinearFATileCoding3456GoToTask(BalanceTask):
                 np.digitize([omegadd], self.omegadd_bounds)[0] - 1,
                 ]
         linear_index = np.dot(self.magic_array, bin_indices)
-        if linear_index > self.outdim:
+        if linear_index > self.outdim-20:
             # DEBUGGING PRINTS
+            print "DEBUG"
             print self.isFinished()
             print self.env.getTilt()
             print np.abs(self.env.getTilt())
             print self.max_tilt
             print np.abs(self.env.getTilt()) > self.max_tilt
-            print self.env.getSensors()[0:5]
+            print self.env.getSensors()
             print self.magic_array
-            print bin_index_for_each_dim
+            print self.getBinIndices(linear_index)
             print linear_index
         return linear_index
+
+    def getBinIndices(self, linear_index):
+        """Given a linear index (integer between 0 and outdim), returns the bin
+        indices for each of the state dimensions.
+
+        """
+        return linear_index / self.magic_array % self.nbins_across_dims
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
                 xf, yf, xb, yb, psi) = self.env.getSensors()
         # TODO not calling superclass to do normalization, etc.
-        return one_to_n(self.getBin(theta, thetad, omega, omegad, omegadd),
-                self.outdim)
+        top_half =  one_to_n(self.getBin(theta, thetad, omega, omegad, omegadd),
+                self.outdim - 20)
+    
+        bot_half = one_to_n(np.digitize([psi], self.psi_bounds)[0] - 1, 20)
+
+        return np.concatenate((top_half,bot_half))
+
+    def isFinished(self):
+        # Criterion for ending an episode.
+        # When the agent reaches the goal, the task is considered learned.
+        # When the agent falls down, the episode is over.
+
+        if np.abs(self.env.getTilt()) > self.max_tilt:
+            return True
+
+        dist_to_goal = self.calc_dist_to_goal()
+        if dist_to_goal == 0:
+            print 'reached goal'
+            return True
+
+        #elapsed_time = self.env.time_step * self.t
+        #if elapsed_time > self.max_time:
+        #    print 'hit max time.', self.t, elapsed_time
+        #    return True    
+        return False
 
     def getReward(self):
-        # -1 reward for falling over; no reward otherwise.
-        x = 15.
-        y = 20.
+        # -1    reward for falling over
+        #  0.01 reward for close to goal
+        #  return reward inversely proportional to heading error otherwise
+
+        r_factor = 0.0001
+
         if np.abs(self.env.getTilt()) > self.max_tilt:
             return -1.0
         else:
-            return 1e-5 * ((self.env.getXF() - x)**2 + (self.env.getYF() - y)**2)
+            temp = self.calc_dist_to_goal()
+            heading = self.calc_angle_to_goal()
+            if (temp < 1e-3):
+                return 0.01
+            else:
+                return (0.95 - heading**2) * r_factor
+
+    def calc_dist_to_goal(self):
+        # ported from Randlov's C code. See bike.c for the source
+        # code.
+
+        # unpack variables
+        x_goal = self.x_goal
+        y_goal = self.y_goal
+        r_goal = self.r_goal
+        xf = self.env.getXF()
+        yf = self.env.getYF()
+
+        sqrd_dist_to_goal = ( x_goal - xf )**2 + ( y_goal -yf )**2 
+        temp = np.max([0, sqrd_dist_to_goal - r_goal**2])
+
+        # We probably don't need to actually compute a sqrt here if it
+        # helps simulation speed.
+        temp = np.sqrt(temp)
+
+        return temp
+
+    def calc_angle_to_goal(self):
+        # ported from Randlov's C code. See bike.c for the source
+        # code. 
+
+        # the following explanation of the returned angle is 
+        # verbatim from Randlov's C source:
+
+        # These angles are neither in degrees nor radians, but 
+        # something strange invented in order to save CPU-time. The 
+        # measure is arranged same way as radians, but with a 
+        # slightly different negative factor
+        #
+        # Say the goal is to the east,
+        # If the agent rides to the east then temp =  0
+        #               " "         north    " "   = -1
+        #               " "         west     " "   = -2 or 2
+        #               " "         south    " "   =  1
+        #
+        # // end quote // 
+
+
+        # TODO: see the psi calculation in the environment, which is not 
+        # currently being used.
+
+
+        # unpack variables
+        x_goal = self.x_goal
+        y_goal = self.y_goal
+        xf = self.env.getXF()
+        xb = self.env.getXB()
+        yf = self.env.getYF()
+        yb = self.env.getYB()
+
+        # implement Randlov's angle computation
+        temp = (xf - xb) * (x_goal - xf) + (yf - yb) * (y_goal - yf)
+        scalar = temp / (1 * np.sqrt( (x_goal - xf)**2 + (y_goal - yf)**2))
+        tvaer = (-yf + yb) * (x_goal - xf) + (xf - xb) * (y_goal-yf)
+
+        if tvaer <= 0 :
+            temp = scalar - 1
+        else:
+            temp = np.abs(scalar - 1)
+
+        return temp
