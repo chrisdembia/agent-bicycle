@@ -84,7 +84,7 @@ class Training:
         freadme.close()
 
         # Save the input .py script into this directory.
-        tback = traceback.extract_stack()[-3]
+        tback = traceback.extract_stack()[-2]
         file_that_instantiates_this_obj = tback[0]
         shutil.copy(file_that_instantiates_this_obj, self.outdir)
 
