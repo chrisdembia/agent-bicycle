@@ -54,6 +54,9 @@ class Environment(pybrain.rl.environments.environment.Environment):
     def __del__(self):
         self.fid.close()
 
+    def getSteer(self):
+        return self.sensors[0]
+
     def getTilt(self):
         return self.sensors[2]
 
@@ -223,3 +226,4 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.yfhist = []
         self.xbhist = []
         self.ybhist = []
+
