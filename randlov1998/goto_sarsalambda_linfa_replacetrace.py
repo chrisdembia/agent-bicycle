@@ -8,7 +8,7 @@ from training import LinearFATraining
 from learners import SARSALambda_LinFA_setAlpha
 
 # learning rate applied to heading states 
-reduced_rate = 0.1
+reduced_rate = 0.25
 # number of states for the balancing task only
 num_states_1 = 3456
 
@@ -37,7 +37,7 @@ experiment = EpisodicExperiment(task, agent)
 # TODO PyBrain says that the learning rate needs to decay, but I don't see that
 # described in Randlov's paper.
 # A higher number here means the learning rate decays slower.
-learner.learningRateDecay = 100000
+learner.learningRateDecay = 5000
 # NOTE increasing this number above from the default of 100 is what got the
 # learning to actually happen, and fixed the bug/issue where the performance
 # agent's performance stopped improving.

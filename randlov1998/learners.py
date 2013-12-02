@@ -31,8 +31,8 @@ class SARSALambda_LinFA_setAlpha(SARSALambda_LinFA_ReplacingTraces):
 	
 
 	def _updateWeights(self, state, action, reward, next_state, next_action):
-		num_states_1 = 1
-		reduced_rate = 1
+		num_states_1 = self.num_states_1
+		reduced_rate = self.reduced_rate
 
 		td_error1 =  self.rewardDiscount*dot(self._theta[next_action, 0:num_states_1], next_state[0:num_states_1]) - dot(self._theta[action, 0:num_states_1], state[0:num_states_1])
 		td_error2 =  self.rewardDiscount*dot(self._theta[next_action, num_states_1:], next_state[num_states_1:]) - dot(self._theta[action, num_states_1:], state[num_states_1:])
