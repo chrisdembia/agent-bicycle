@@ -27,6 +27,7 @@ class Training:
     learning; what happens in them and how long they are is up to the subclass.
 
     """
+    traceback_number = 3
     def __init__(self, name, experiment, performance_agent, description=None,
             verbose=True):
         """
@@ -84,8 +85,9 @@ class Training:
         freadme.close()
 
         # Save the input .py script into this directory.
-        tback = traceback.extract_stack()[-2]
+        tback = traceback.extract_stack()[-self.traceback_number]
         file_that_instantiates_this_obj = tback[0]
+        print file_that_instantiates_this_obj
         shutil.copy(file_that_instantiates_this_obj, self.outdir)
 
 
@@ -256,6 +258,7 @@ class Training:
 
 
 class NFQTraining(Training):
+    traceback_number = 2
     def rehearse(self, irehearsal, n_episodes_per_rehearsal):
         r = self.exp.doEpisodes(n_episodes_per_rehearsal)
         self.exp.agent.learn()
@@ -268,11 +271,13 @@ class NFQTraining(Training):
 class LinearFATraining(Training):
     def __init__(self, *args, **kwargs):
         Training.__init__(self, *args, **kwargs)
+        self.batch = self.exp.agent.learner.batchMode
         self.thetafile = open(self.fullFilePath('theta.dat'), 'w')
     def __del__(self):
         self.thetafile.close()
     def rehearse(self, irehearsal, n_episodes_per_rehearsal):
         r = self.exp.doEpisodes(n_episodes_per_rehearsal)
+        if self.batch: self.exp.agent.learn()
         # Discounted reward/return (I think):
         cumreward = self.exp.task.getTotalReward()
         if self.verbose:
