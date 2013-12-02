@@ -20,6 +20,9 @@ class SARSALambda_LinFA_ReplacingTraces(SARSALambda_LinFA):
         	self._etraces[argwhere(action_bit != 1), argstate] = 0.   
 
 class SARSALambda_LinFA_setAlpha(SARSALambda_LinFA_ReplacingTraces):
+	
+	reduced_rate = 0.25 # the learning rate to be applied to the heading states
+
 	def __init__(self, reduced_rate, num_states_1, *args, **kwargs):
 		""" additional arguments to pass in: reduced_rate and num_states_1
 		reduced_rate is the learning rate that will be applied to 
@@ -39,3 +42,7 @@ class SARSALambda_LinFA_setAlpha(SARSALambda_LinFA_ReplacingTraces):
 
 		self._updateEtraces(state, action)
 		self._theta += ( self.learningRate * (reward + td_error1) + ( reduced_rate * td_error2 )  ) * self._etraces
+	
+	def newEpisode(self):
+		SARSALambda_LinFA_ReplacingTraces.newEpisode(self)
+		self.reduced_rate *= ((self.learningRateDecay + self._callcount)/(self.learningRateDecay + self._callcount + 1.))

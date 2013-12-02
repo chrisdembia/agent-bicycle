@@ -1,25 +1,20 @@
-
 from pybrain.rl.agents.linearfa import LinearFA_Agent
 from pybrain.rl.experiments import EpisodicExperiment
 
 from environment import Environment
-from tasks import LinearFATileCoding3476GoToTask
+from tasks import LinearFATileCoding3476BalanceTask
 from training import LinearFATraining_setAlpha
 from learners import SARSALambda_LinFA_setAlpha
 
-# TODO: load theta from a learned balance task
-# I created a script balance_sarsa_linfa_replace_3476.py that 
-# should output a theta data file in the same dimension as the goto
-# task.
-
 # learning rate applied to heading states 
 reduced_rate = 0.25
-# number of states for the balancing task only
+# number of states for the balancing task only, this is used to selectively
+# different learning rates for balancing states and heading states
 num_states_1 = 3456
 
-# this task should now include 20 discretized heading states
-# it also uses the same reward function as in Randlov 1998
-task = LinearFATileCoding3476GoToTask()
+# this task includes 20 discretized heading states
+# the reward for this task is identical to the balance task
+task = LinearFATileCoding3476BalanceTask()
 
 # creating a modified SARSALambda learner, which applies a reduced rate to the
 # heading states
