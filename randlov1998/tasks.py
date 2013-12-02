@@ -56,6 +56,7 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
         ## None for sensor limits; does not normalize sensor values.
         ## outdim should be set to the length of the sensors vector.
         #self.setScaling([None] * self.env.outdim, [T_limits, d_limits])
+        self.action_history = np.zeros(self.nactions)
 
     @property
     def indim(self):
@@ -76,6 +77,7 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
 
         """
         self.t += 1
+        self.action_history += one_to_n(action[0], self.nactions)
         # Map the action integer to a torque and displacement.
         assert round(action[0]) == action[0]
 
@@ -117,7 +119,6 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
         # -1 reward for falling over; no reward otherwise.
         if np.abs(self.env.getTilt()) > self.max_tilt:
             return -1.0
-        # TODO return -np.abs(self.env.getSensors()[0])
         return 0.0
 
 
@@ -525,7 +526,6 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
 
         #return temp
 
-
         # try just returning the angle in radians, instead of
         # randlov's funky units
         f2g = [(xf - x_goal), (yf - y_goal)] 
@@ -540,9 +540,13 @@ class LinearFATileCoding3476BalanceTask(LinearFATileCoding3476GoToTask):
     """ This class will implement the balance task using tiled states for 
         heading.
     """
+        return temp
+
+class Proportional3456ControlBalanceTask(LinearFATileCoding3456BalanceTask):
+
     def getReward(self):
         # -1 reward for falling over; no reward otherwise.
         if np.abs(self.env.getTilt()) > self.max_tilt:
             return -1.0
-        # TODO return -np.abs(self.env.getSensors()[0])
-        return 0.0
+            
+        return -np.abs(self.env.getSensors()[0])

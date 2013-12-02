@@ -4,7 +4,7 @@ import os
 import traceback
 import shutil
 
-from numpy import mean, array_str, empty, savetxt
+from numpy import mean, array_str, empty, savetxt, arange
 from matplotlib import pyplot as plt
 
 from pybrain.tools.customxml.networkwriter import NetworkWriter
@@ -27,6 +27,7 @@ class Training:
     learning; what happens in them and how long they are is up to the subclass.
 
     """
+    traceback_number = 3
     def __init__(self, name, experiment, performance_agent, description=None,
             verbose=True):
         """
@@ -84,14 +85,16 @@ class Training:
         freadme.close()
 
         # Save the input .py script into this directory.
-        tback = traceback.extract_stack()[-2]
+        tback = traceback.extract_stack()[-self.traceback_number]
         file_that_instantiates_this_obj = tback[0]
+        print file_that_instantiates_this_obj
         shutil.copy(file_that_instantiates_this_obj, self.outdir)
 
 
     def train(self, n_max_rehearsals, do_plot=True, performance_interval=10,
             n_performance_episodes=5, serialization_interval=10,
-            n_episodes_per_rehearsal=1, plotsave_interval=100):
+            n_episodes_per_rehearsal=1, plotsave_interval=100,
+            plot_action_history=False):
         """Training consists of a loop of (1) rehearsing, (2) plotting the
         reward and bicycle wheel trajectory, and (3) writing output to a file
         (including the learner; e.g., weights).
@@ -123,6 +126,9 @@ class Training:
             is True) to a file. It doesn't make sense for this to be less than
             the performance_interval; then you'd be saving multiple plots of
             the SAME thing.
+        plot_action_history : bool, optional
+            Plot a histogram of the actions that have been taken along with the
+            other plots.
 
         """
         # TODO unless we start writing out the success metric to a file, the
@@ -130,7 +136,13 @@ class Training:
         if do_plot:
             self.exp.task.env.saveWheelContactTrajectories(True)
             plt.ion()
-            plt.figure(figsize=(8, 4))
+            if plot_action_history:
+                plt.figure(figsize=(12, 4))
+                nplots = 3
+                action_hist_x = arange(self.exp.task.nactions)
+            else:
+                plt.figure(figsize=(8, 4))
+                nplots = 2
             plt.suptitle(self.name, fontweight='bold')
 
         success_metric_history = []
@@ -150,13 +162,18 @@ class Training:
                         self.perform(n_performance_episodes))
                 if do_plot:
                     # Success history.
-                    plt.subplot(121)
+                    plt.subplot(1, nplots, 1)
                     plt.cla()
                     plt.plot(success_metric_history, '.--')
                     # Wheel trajectories.
-                    plt.subplot(122)
+                    plt.subplot(1, nplots, 2)
                     self._update_wheel_trajectories()
                     # Necessary (?) plotting mechanics.
+
+                    if plot_action_history:
+                        plt.subplot(1, nplots, 3)
+                        plt.bar(action_hist_x, self.exp.task.action_history)
+
                     plt.draw()
                     plt.pause(0.001)
             if do_plot and irehearsal % plotsave_interval == 0:
@@ -241,6 +258,7 @@ class Training:
 
 
 class NFQTraining(Training):
+    traceback_number = 2
     def rehearse(self, irehearsal, n_episodes_per_rehearsal):
         r = self.exp.doEpisodes(n_episodes_per_rehearsal)
         self.exp.agent.learn()
@@ -253,11 +271,13 @@ class NFQTraining(Training):
 class LinearFATraining(Training):
     def __init__(self, *args, **kwargs):
         Training.__init__(self, *args, **kwargs)
+        self.batch = self.exp.agent.learner.batchMode
         self.thetafile = open(self.fullFilePath('theta.dat'), 'w')
     def __del__(self):
         self.thetafile.close()
     def rehearse(self, irehearsal, n_episodes_per_rehearsal):
         r = self.exp.doEpisodes(n_episodes_per_rehearsal)
+        if self.batch: self.exp.agent.learn()
         # Discounted reward/return (I think):
         cumreward = self.exp.task.getTotalReward()
         if self.verbose:

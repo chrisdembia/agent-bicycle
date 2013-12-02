@@ -111,17 +111,17 @@ class MyApp(ShowBase):
             self.rear_wheel.setP(-self.rad2deg * self.wheel_roll)
             self.rear_wheel.setR(self.rad2deg * self.bike.getTilt())
             self.frame.setP(self.rad2deg * self.wheel_roll)
-            self.fork.setH(-self.rad2deg * self.bike.getSteer())
+            self.fork.setH(self.rad2deg * self.bike.getSteer())
             self.front_wheel.setP(-self.rad2deg * self.wheel_roll)
         else:
             self.bike.reset()
         return Task.cont
 
     def torqueRight(self):
-        self.torque = 2.0
+        self.torque = -2.0
 
     def torqueLeft(self):
-        self.torque = -2.0
+        self.torque = 2.0
 
     def buttRight(self):
         self.butt_displacement = 0.02
