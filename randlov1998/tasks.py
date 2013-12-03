@@ -342,14 +342,13 @@ class LSPIBalanceTask(BalanceTask):
         (theta, thetad, omega, omegad, omegadd,
                 xf, yf, xb, yb, psi) = self.env.getSensors()
         return self.getPhi(theta, thetad, omega, omegad, omegadd)
-
-      
-class LinearFATileCoding3456GoToTask(BalanceTask):
+          
+class LinearFATileCoding3476GoToTask(BalanceTask):
     """An attempt to exactly implement Randlov's function approximation. He
-    discretized (tiled) the input space into 3456 tiles.
-
+    discretized (tiled) the input space into 3476 (3456 balance states + 20 
+    heading states) tiles.
     """
-    # Goal position and raduis
+    # Goal position and radius
     x_goal = 20.
     y_goal = 20.
     r_goal = 10.
@@ -516,15 +515,31 @@ class LinearFATileCoding3456GoToTask(BalanceTask):
         yb = self.env.getYB()
 
         # implement Randlov's angle computation
-        temp = (xf - xb) * (x_goal - xf) + (yf - yb) * (y_goal - yf)
-        scalar = temp / (1 * np.sqrt( (x_goal - xf)**2 + (y_goal - yf)**2))
-        tvaer = (-yf + yb) * (x_goal - xf) + (xf - xb) * (y_goal-yf)
+        #temp = (xf - xb) * (x_goal - xf) + (yf - yb) * (y_goal - yf)
+        #scalar = temp / (1 * np.sqrt( (x_goal - xf)**2 + (y_goal - yf)**2))
+        #tvaer = (-yf + yb) * (x_goal - xf) + (xf - xb) * (y_goal-yf)
 
-        if tvaer <= 0 :
-            temp = scalar - 1
-        else:
-            temp = np.abs(scalar - 1)
+        #if tvaer <= 0 :
+        #    temp = scalar - 1
+        #else:
+        #    temp = np.abs(scalar - 1)
 
+        #return temp
+
+        # try just returning the angle in radians, instead of
+        # randlov's funky units
+        f2g = [(xf - x_goal), (yf - y_goal)] 
+        b2f = [(xf - xb), (yf - yb)]
+        temp = np.dot(f2g,b2f)/(np.linalg.norm(f2g) * np.linalg.norm(b2f))
+        temp = np.arccos(temp)
+
+        return temp
+        
+        
+class LinearFATileCoding3476BalanceTask(LinearFATileCoding3476GoToTask):
+    """ This class will implement the balance task using tiled states for 
+        heading.
+    """
         return temp
 
 class Proportional3456ControlBalanceTask(LinearFATileCoding3456BalanceTask):
@@ -533,5 +548,5 @@ class Proportional3456ControlBalanceTask(LinearFATileCoding3456BalanceTask):
         # -1 reward for falling over; no reward otherwise.
         if np.abs(self.env.getTilt()) > self.max_tilt:
             return -1.0
+            
         return -np.abs(self.env.getSensors()[0])
-

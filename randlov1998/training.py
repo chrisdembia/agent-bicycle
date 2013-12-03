@@ -291,4 +291,11 @@ class LinearFATraining(Training):
         #self.thetafile.write('%i %s' % (irehearsal, flatthetastr))
         # TODO
 
-# class LinearFATraining_setAlpha(LinearFATraining):
+class LinearFATraining_setAlpha(LinearFATraining):
+    def rehearse(self, irehearsal, n_episodes_per_rehearsal):
+        r = self.exp.doEpisodes(n_episodes_per_rehearsal)
+        # Discounted reward/return (I think):
+        cumreward = self.exp.task.getTotalReward()
+        if self.verbose:
+            print 'cumreward: %.4f; nsteps: %i; learningRate: %.4f, %.4f' % (
+                    cumreward, len(r[0]), self.exp.agent.learner.learningRate, self.exp.agent.learner.reduced_rate)
