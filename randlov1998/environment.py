@@ -3,12 +3,12 @@ from scipy import asarray
 
 from numpy import sin, cos, tan, sqrt, arcsin, arctan, sign
 
-import pybrain.rl.environments.environment
+from pybrain.rl.environments.graphical import GraphicalEnvironment
 
 # TODO consider moving some calculations, like psi, from the environment to the
 # task. psi seems particularly task-dependent.
-class Environment(pybrain.rl.environments.environment.Environment):
-        # TODO RL-state is [theta, thetad, omega, omegad, omegadd]^T
+class Environment(GraphicalEnvironment):
+    # TODO RL-state is [theta, thetad, omega, omegad, omegadd]^T
 
     # For superclass.
     indim = 2
@@ -43,13 +43,12 @@ class Environment(pybrain.rl.environments.environment.Environment):
     sigmad = v / r
 
     def __init__(self):
-        super(Environment, self).__init__()
+        GraphicalEnvironment.__init__(self)
         self.reset()
         self.actions = [0.0, 0.0]
         self.fid = open('record.txt', 'w')
         self.fid.write('theta thetad omega omegad xb yb T d\n')
         self._save_wheel_contact_trajectories = False
-        # TODO self.delay
 
     def __del__(self):
         self.fid.close()
@@ -209,6 +208,10 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.sensors = np.array([theta, thetad, omega, omegad, omegadd,
                 xf, yf, xb, yb, psi])
 
+        if self.hasRenderer():
+            self.getRenderer().updateData(self.sensors)
+
+
     def reset(self):
         theta = 0
         thetad = 0
@@ -226,4 +229,3 @@ class Environment(pybrain.rl.environments.environment.Environment):
         self.yfhist = []
         self.xbhist = []
         self.ybhist = []
-

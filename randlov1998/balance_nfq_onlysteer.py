@@ -19,5 +19,5 @@ experiment = EpisodicExperiment(task, agent)
 
 tr = NFQTraining('balance_nfq', experiment, performance_agent)
 
-tr.train(7000, performance_interval=1, n_performance_episodes=1)
+tr.train(7000, performance_interval=1, n_performance_episodes=1, plot_action_history=True)
 
