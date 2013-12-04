@@ -448,7 +448,7 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         # -1    reward for falling over
         #  0.01 reward for close to goal
         #  return reward inversely proportional to heading error otherwise
-
+        
         r_factor = 0.0001
 
         if np.abs(self.env.getTilt()) > self.max_tilt:
@@ -457,6 +457,7 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
             temp = self.calc_dist_to_goal()
             heading = self.calc_angle_to_goal()
             if (temp < 1e-3):
+                print 'DEBUG: GOAL REACHED'
                 return 0.01
             else:
                 return (0.95 - heading**2) * r_factor
@@ -540,7 +541,11 @@ class LinearFATileCoding3476BalanceTask(LinearFATileCoding3476GoToTask):
     """ This class will implement the balance task using tiled states for 
         heading.
     """
-        return temp
+    def getReward(self):
+        # -1 reward for falling over; no reward otherwise.
+        if np.abs(self.env.getTilt()) > self.max_tilt:
+            return -1.0
+        return 0.0
 
 class Proportional3456ControlBalanceTask(LinearFATileCoding3456BalanceTask):
 
