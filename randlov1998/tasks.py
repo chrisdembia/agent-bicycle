@@ -441,7 +441,8 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         elapsed_time = self.env.time_step * self.t
         if elapsed_time > self.max_time:
             print 'hit max time.', self.t, elapsed_time
-            return True    
+            print self.env.getXF(), self.env.getYF()
+            return True
         return False
 
     def getReward(self):
@@ -454,11 +455,11 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
             return -1.0
         else:
             temp = self.calc_dist_to_goal()
-            heading = self.calc_angle_to_goal()
             if (temp < 1e-3):
                 print 'DEBUG: GOAL REACHED'
                 return 0.01
             else:
+                heading = self.calc_angle_to_goal()
                 return (0.95 - heading**2) * r_factor
 
     def calc_dist_to_goal(self):
