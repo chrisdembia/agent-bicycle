@@ -438,10 +438,10 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
             print 'reached goal'
             return True
 
-        #elapsed_time = self.env.time_step * self.t
-        #if elapsed_time > self.max_time:
-        #    print 'hit max time.', self.t, elapsed_time
-        #    return True    
+        elapsed_time = self.env.time_step * self.t
+        if elapsed_time > self.max_time:
+            print 'hit max time.', self.t, elapsed_time
+            return True    
         return False
 
     def getReward(self):
@@ -450,7 +450,6 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         #  return reward inversely proportional to heading error otherwise
         
         r_factor = 0.0001
-
         if np.abs(self.env.getTilt()) > self.max_tilt:
             return -1.0
         else:
