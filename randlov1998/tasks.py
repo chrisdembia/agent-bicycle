@@ -549,6 +549,7 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
                 #return heading_reward + dist_reward
                 return 1/distance
 
+
     def calc_dist_to_goal(self):
         # ported from Randlov's C code. See bike.c for the source
         # code.

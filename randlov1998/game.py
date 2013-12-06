@@ -1,6 +1,8 @@
 import time
 from math import pi, sin, cos
- 
+
+import numpy as np
+
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.actor.Actor import Actor
@@ -90,15 +92,23 @@ class LearningVisualization(ShowBase):
 class Game(ShowBase):
 
     rad2deg = 180. / 3.14
-    def __init__(self):
+    def __init__(self, agent=None, task=None, noise_mag=0.02):
         ShowBase.__init__(self)
+        self.agent = agent
+        self.noise_mag = noise_mag
+        if task:
+            self.task = task
+            self.bike = self.task.env
+            self.bike.reset()
+        else:
+            # Randlov's bicycle.
+            self.bike = Environment()
+
+        #self.bike.h = 0.1
 
         self.wheel_roll = 0
         self.torque = 0
         self.butt_displacement = 0
-
-        # Randlov's bicycle.
-        self.bike = Environment()
  
         # Load the environment model.
         #self.environ = self.loader.loadModel("models/environment")
@@ -195,10 +205,14 @@ class Game(ShowBase):
         print "hello"
 
     def simulateBicycleTask(self, task):
-        butt_disp_w_noise = self.butt_displacement + 0.02 * (2.0 *
+        butt_disp_w_noise = self.butt_displacement + self.noise_mag * (2.0 *
                 (np.random.rand() - 1.0))
-        self.bike.actions = [self.torque, butt_disp_w_noise]
-        self.bike.step()
+        if self.agent and self.task:
+            self.agent.integrateObservation(self.task.getObservation())
+            self.task.performAction(self.agent.getAction())
+        else:
+            self.bike.actions = [self.torque, butt_disp_w_noise]
+            self.bike.step()
         if abs(self.bike.getTilt()) < BalanceTask.max_tilt:
             self.wheel_roll += self.bike.time_step * self.bike.sigmad
             self.rear_wheel.setPos(self.bike.getXB(), self.bike.getYB(),
@@ -209,6 +223,7 @@ class Game(ShowBase):
             self.butt.setX(butt_disp_w_noise)
             self.fork.setH(self.rad2deg * self.bike.getSteer())
             self.front_wheel.setP(-self.rad2deg * self.wheel_roll)
+            time.sleep(self.bike.time_step)
         else:
             time.sleep(1)
             self.bike.reset()
