@@ -388,7 +388,7 @@ class LSPIGotoTask(BalanceTask):
     def getReward(self):
         # Lagoudakis (2002) reward function
         # reward = (net change in tilt^2) + (net change in dist_to_goal^2) * 0.01
-        delta_tilt = self.env.getTilt()**2 - self.env.last_omega
+        delta_tilt = self.env.getTilt()**2 - self.env.last_omega**2
         delta_dist = self.calc_dist_to_goal() - self.calc_last_dist_to_goal()
         
         return -delta_tilt - delta_dist * 0.01
