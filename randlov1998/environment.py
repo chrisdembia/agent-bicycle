@@ -19,7 +19,7 @@ class Environment(GraphicalEnvironment):
     
     # Goal position and radius
     # Lagouakis (2002) uses angle to goal, not heading, as a state
-    x_goal = 5.
+    x_goal = 0.
     y_goal = 20.
     r_goal = 5.
     max_distance = 1000.

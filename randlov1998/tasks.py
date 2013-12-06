@@ -343,10 +343,45 @@ class LSPIBalanceTask(BalanceTask):
 class LSPIGotoTask(BalanceTask):
     """Lagoudakis, 2002, trying to implement the balance + goto task
     """
-    
+        
+    def __init__(self, five_actions = False, *args, **kwargs):
+        BalanceTask.__init__(self,*args,**kwargs)
+        self.five_actions = five_actions
+        
+        
     @property 
     def outdim(self):
         return 20
+        
+    def performAction(self, action):
+        """Incoming action is an int between 0 and 4. The action we provide to
+        the environment consists of a torque T in {-2 N, 2 N}, and a
+        displacement d in {-.02 m, 0, 0.02 m}.
+
+        """
+        if self.five_actions:
+            p = 2.0 * np.random.rand() - 1.0
+            T = 0
+            d = self._butt_disturbance_amplitude * p
+            
+            self.t += 1
+            self.action_history += one_to_n(action[0], self.nactions)
+            
+            # Map the action integer to a torque and displacement.
+            assert round(action[0]) == action[0]
+            if action[0] == 0:
+                T = -2
+            elif action[0] == 1:
+                T = 2
+            elif action[0] == 2:
+                d -= 0.02
+            elif action[0] == 3:
+                d += 0.02  
+                
+            super(BalanceTask, self).performAction([T, d])
+            
+        else:
+            BalanceTask.performAction(self, action)
         
     def getPhi(self, theta, thetad, omega, omegad, omegadd, psig):
         # from Lagoudakis
@@ -390,7 +425,7 @@ class LSPIGotoTask(BalanceTask):
         # reward = (net change in tilt^2) + (net change in dist_to_goal^2) * 0.01
         delta_tilt = self.env.getTilt()**2 - self.env.last_omega**2
         delta_dist = self.calc_dist_to_goal() - self.calc_last_dist_to_goal()
-        
+                
         return -delta_tilt - delta_dist * 0.01
         
         # trying a simple proportional reward first

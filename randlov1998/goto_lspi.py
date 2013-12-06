@@ -6,7 +6,7 @@ from environment import Environment
 from tasks import LSPIGotoTask
 from training import LinearFATraining
 
-task = LSPIGotoTask(butt_disturbance_amplitude = 0.0000)
+task = LSPIGotoTask(butt_disturbance_amplitude = 0.0000, five_actions = True)
 learner = LSPI(task.nactions, task.outdim)
 # TODO this LSPI does not have eligibility traces.
 #learner._lambda = 0.95
