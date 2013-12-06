@@ -311,7 +311,7 @@ class LinearFATileCoding3456BalanceTask(BalanceTask):
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.getSensors()
+                xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         # TODO not calling superclass to do normalization, etc.
         state = one_to_n(self.getBin(theta, thetad, omega, omegad, omegadd),
                 self.outdim)
