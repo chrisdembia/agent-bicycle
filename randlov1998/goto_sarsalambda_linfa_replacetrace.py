@@ -13,19 +13,20 @@ from learners import SARSALambda_LinFA_setAlpha
 # task.
 
 # learning rate applied to heading states 
-reduced_rate = 0.25
+reduced_rate = 0.0
 # number of states for the balancing task only
 num_states_1 = 3456
 
 # this task should now include 20 discretized heading states
 # it also uses the same reward function as in Randlov 1998
-task = LinearFATileCoding3476GoToTask(butt_disturbance_amplitude = 0.0)
-task.x_goal = 0
+task = LinearFATileCoding3476GoToTask(butt_disturbance_amplitude = 0.0, max_time=10.)
+task.x_goal = 6
+task.r_goal = 5
 task.env.time_step = 0.02
 
 # creating a modified SARSALambda learner, which applies a reduced rate to the
 # heading states
-learner = SARSALambda_LinFA_setAlpha(reduced_rate, num_states_1, task.nactions, task.outdim)
+learner = SARSALambda_LinFA_setAlpha(reduced_rate, num_states_1, task.nactions, task.outdim, randomInit=False)
 learner._lambda = 0.95
 
 task.discount = learner.rewardDiscount
@@ -44,7 +45,7 @@ experiment = EpisodicExperiment(task, agent)
 # TODO PyBrain says that the learning rate needs to decay, but I don't see that
 # described in Randlov's paper.
 # A higher number here means the learning rate decays slower.
-learner.learningRateDecay = 800
+learner.learningRateDecay = 5000
 # NOTE increasing this number above from the default of 100 is what got the
 # learning to actually happen, and fixed the bug/issue where the performance
 # agent's performance stopped improving.

@@ -460,7 +460,7 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
                 return 0.01
             else:
                 heading = self.calc_angle_to_goal()
-                return (0.95 - heading**2) * r_factor
+                return 0.1 / (heading**2 + 0.1) * r_factor
 
     def calc_dist_to_goal(self):
         # ported from Randlov's C code. See bike.c for the source
