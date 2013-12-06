@@ -19,10 +19,15 @@ class Environment(GraphicalEnvironment):
     
     # Goal position and radius
     # Lagouakis (2002) uses angle to goal, not heading, as a state
-    x_goal = 100.
-    y_goal = 100.
-    r_goal = 10.
+    x_goal = 5.
+    y_goal = 20.
+    r_goal = 5.
     max_distance = 1000.
+    
+    # last state storage variables
+    last_xf = 0
+    last_yf = 0
+    last_omega = 0
 
     # Acceleration on Earth's surface due to gravity (m/s^2):
     g = 9.82
@@ -115,6 +120,11 @@ class Environment(GraphicalEnvironment):
                 xf, yf, xb, yb, psi, psig) = self.sensors
         (T, d) = self.actions
 
+        # store a last states 
+        self.last_xf = xf
+        self.last_yf = yf
+        self.last_omega = omega
+        
         # For recordkeeping.
         # ------------------
         if self._save_wheel_contact_trajectories:
@@ -233,6 +243,7 @@ class Environment(GraphicalEnvironment):
 
         if self.hasRenderer():
             self.getRenderer().updateData(self.sensors)
+            
 
 
     def reset(self):

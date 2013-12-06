@@ -30,7 +30,7 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
     # pi/15. These are actually equivalent.
     #max_tilt = 12.0 * np.pi / 180.0
     max_tilt = np.pi / 15.0
-
+    #max_tilt = np.pi / 6. 
     nactions = 9
 
     def __init__(self, butt_disturbance_amplitude=0.02, only_steer=False,
@@ -343,8 +343,6 @@ class LSPIBalanceTask(BalanceTask):
 class LSPIGotoTask(BalanceTask):
     """Lagoudakis, 2002, trying to implement the balance + goto task
     """
-    lastdist = 0
-    lasttilt = 0
     
     @property 
     def outdim(self):
@@ -390,17 +388,36 @@ class LSPIGotoTask(BalanceTask):
     def getReward(self):
         # Lagoudakis (2002) reward function
         # reward = (net change in tilt^2) + (net change in dist_to_goal^2) * 0.01
+        delta_tilt = self.env.getTilt()**2 - self.env.last_omega
+        delta_dist = self.calc_dist_to_goal() - self.calc_last_dist_to_goal()
+        
+        return -delta_tilt - delta_dist * 0.01
         
         # trying a simple proportional reward first
-        dist_to_goal = self.calc_dist_to_goal()
+        #dist_to_goal = self.calc_dist_to_goal()
+        #if dist_to_goal == 0:
+        #    return 1
         # range [0.1856 - 1]
-        tiltReward = 1/((10*self.env.getTilt())**2 + 1)
+        #tiltReward = 1/((10*self.env.getTilt())**2 + 1)
         # ~0.1 to ~1
-        distReward = 100/dist_to_goal
-        headingReward = 10/((10*self.env.getPSIG())**2 + 1)
-        print tiltReward, distReward, headingReward
-        return tiltReward + distReward + headingReward
-                
+        #distReward = 10/dist_to_goal
+        #headingReward = 5/((10*self.env.getPSIG())**2 + 1)
+        #print tiltReward, distReward, headingReward
+        #return tiltReward + distReward + headingReward
+    
+    def calc_last_dist_to_goal(self):
+        x_goal = self.env.x_goal
+        y_goal = self.env.y_goal
+        r_goal = self.env.r_goal
+        
+        last_xf = self.env.last_xf
+        last_yf = self.env.last_yf
+        
+        sqrd_dist_to_goal = ( x_goal - last_xf )**2 + ( y_goal - last_yf )**2 
+        temp = np.max([0, sqrd_dist_to_goal - r_goal**2])
+
+        return np.sqrt(temp)    
+        
     def calc_dist_to_goal(self):
         # Returns distance to goal. Distance is zero whenever the
         # front tire is within the goal radius.
@@ -415,6 +432,7 @@ class LSPIGotoTask(BalanceTask):
         temp = np.max([0, sqrd_dist_to_goal - r_goal**2])
 
         return np.sqrt(temp)    
+        
         
 class LinearFATileCoding3476GoToTask(BalanceTask):
     """An attempt to exactly implement Randlov's function approximation. He
