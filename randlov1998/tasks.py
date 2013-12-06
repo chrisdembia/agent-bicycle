@@ -396,9 +396,8 @@ class LSPIGotoTask(BalanceTask):
         # range [0.1856 - 1]
         tiltReward = 1/((10*self.env.getTilt())**2 + 1)
         # ~0.1 to ~1
-        distReward = 100/dist_to_goal
+        distReward = 100/(dist_to_goal + 1.)
         headingReward = 10/((10*self.env.getPSIG())**2 + 1)
-        print tiltReward, distReward, headingReward
         return tiltReward + distReward + headingReward
                 
     def calc_dist_to_goal(self):
@@ -422,9 +421,6 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
     heading states) tiles.
     """
     # Goal position and radius
-    x_goal = 5.
-    y_goal = 20.
-    r_goal = 10.
     max_distance = 1000
 
     # From Randlov, 1998:
@@ -555,9 +551,9 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         # code.
 
         # unpack variables
-        x_goal = self.x_goal
-        y_goal = self.y_goal
-        r_goal = self.r_goal
+        x_goal = self.env.x_goal
+        y_goal = self.env.y_goal
+        r_goal = self.env.r_goal
         xf = self.env.getXF()
         yf = self.env.getYF()
 
@@ -596,8 +592,8 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
 
 
         # unpack variables
-        x_goal = self.x_goal
-        y_goal = self.y_goal
+        x_goal = self.env.x_goal
+        y_goal = self.env.y_goal
         xf = self.env.getXF()
         xb = self.env.getXB()
         yf = self.env.getYF()
