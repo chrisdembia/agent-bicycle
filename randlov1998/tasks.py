@@ -99,7 +99,7 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.getSensors()
+                xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         # TODO not calling superclass to do normalization, etc.
         return self.env.getSensors()[0:5]
 
@@ -121,15 +121,14 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
             return -1.0
         return 0.0
 
-
 class GotoTask(BalanceTask):
     """ The rider is to balance the bicycle while moving toward a 
     prescribed goal 
     """
 
     # Goal position and raduis
-    x_goal = 20.
-    y_goal = 8.
+    x_goal = 1500.
+    y_goal = 1500.
     r_goal = 10.
 
     @property
@@ -140,7 +139,7 @@ class GotoTask(BalanceTask):
         # let the learner know about the front tire position and 
         # the heading.
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.getSensors()
+                xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         
         # TODO not calling superclass to do normalization, etc.
         return [ self.env.getSensors()[i] for i in [0, 1, 2, 3, 4, 5, 6, 9] ]
@@ -243,7 +242,6 @@ class GotoTask(BalanceTask):
 
         return temp
 
-
 class LinearFATileCoding3456BalanceTask(BalanceTask):
     """An attempt to exactly implement Randlov's function approximation. He
     discretized (tiled) the input space into 3456 tiles.
@@ -320,7 +318,6 @@ class LinearFATileCoding3456BalanceTask(BalanceTask):
         self.bin_count += state
         return state
 
-
 class LSPIBalanceTask(BalanceTask):
     """Lagoudakis, 2002; simplified for just balancing. Also, we're still using
     all 9 possible actions.
@@ -340,18 +337,95 @@ class LSPIBalanceTask(BalanceTask):
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.getSensors()
+                xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         return self.getPhi(theta, thetad, omega, omegad, omegadd)
-          
+        
+class LSPIGotoTask(BalanceTask):
+    """Lagoudakis, 2002, trying to implement the balance + goto task
+    """
+    lastdist = 0
+    lasttilt = 0
+    
+    @property 
+    def outdim(self):
+        return 20
+        
+    def getPhi(self, theta, thetad, omega, omegad, omegadd, psig):
+        # from Lagoudakis
+        if psig >= 0:
+            psig_bar = np.pi - psig
+        else:
+            psig_bar = -np.pi - psig
+        return np.array([
+            1, omega, omegad, omega**2, omegad**2, omega * omegad,
+            theta, thetad, theta**2, thetad**2, theta * thetad,
+            omega * theta, omega * theta**2, omega**2 * theta,
+            psig, psig**2, psig*theta, psig_bar, psig_bar**2, psig_bar*theta])
+     
+    def getObservation(self):
+        (theta, thetad, omega, omegad, omegadd,
+            xf, yf, xb, yb, psi, psig) = self.env.getSensors()
+        return  self.getPhi(theta,thetad,omega, omegad, omegadd, psig)
+    
+    def isFinished(self):
+        # Criterion for ending an episode.
+        # When the agent reaches the goal, the task is considered learned.
+        # When the agent falls down, the episode is over.
+
+        if np.abs(self.env.getTilt()) > self.max_tilt:
+            return True
+
+        dist_to_goal = self.calc_dist_to_goal()
+        if dist_to_goal == 0:
+            print 'reached goal'
+            return True
+
+        elapsed_time = self.env.time_step * self.t
+        if elapsed_time > self.max_time or dist_to_goal > self.env.max_distance:
+            print 'time elapsed', self.t, elapsed_time
+            print 'distance to goal', dist_to_goal
+            return True    
+        return False
+
+    def getReward(self):
+        # Lagoudakis (2002) reward function
+        # reward = (net change in tilt^2) + (net change in dist_to_goal^2) * 0.01
+        
+        # trying a simple proportional reward first
+        dist_to_goal = self.calc_dist_to_goal()
+        # range [0.1856 - 1]
+        tiltReward = 1/((10*self.env.getTilt())**2 + 1)
+        # ~0.1 to ~1
+        distReward = 100/dist_to_goal
+        headingReward = 10/((10*self.env.getPSIG())**2 + 1)
+        print tiltReward, distReward, headingReward
+        return tiltReward + distReward + headingReward
+                
+    def calc_dist_to_goal(self):
+        # Returns distance to goal. Distance is zero whenever the
+        # front tire is within the goal radius.
+        # unpack variables
+        x_goal = self.env.x_goal
+        y_goal = self.env.y_goal
+        r_goal = self.env.r_goal
+        xf = self.env.getXF()
+        yf = self.env.getYF()
+        
+        sqrd_dist_to_goal = ( x_goal - xf )**2 + ( y_goal -yf )**2 
+        temp = np.max([0, sqrd_dist_to_goal - r_goal**2])
+
+        return np.sqrt(temp)    
+        
 class LinearFATileCoding3476GoToTask(BalanceTask):
     """An attempt to exactly implement Randlov's function approximation. He
     discretized (tiled) the input space into 3476 (3456 balance states + 20 
     heading states) tiles.
     """
     # Goal position and radius
-    x_goal = 20.
+    x_goal = 5.
     y_goal = 20.
     r_goal = 10.
+    max_distance = 1000
 
     # From Randlov, 1998:
     theta_bounds = np.array(
@@ -416,7 +490,7 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.getSensors()
+                xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         # TODO not calling superclass to do normalization, etc.
         top_half =  one_to_n(self.getBin(theta, thetad, omega, omegad, omegadd),
                 self.outdim - 20)
@@ -438,10 +512,11 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
             print 'reached goal'
             return True
 
-        #elapsed_time = self.env.time_step * self.t
-        #if elapsed_time > self.max_time:
-        #    print 'hit max time.', self.t, elapsed_time
-        #    return True    
+        elapsed_time = self.env.time_step * self.t
+        if elapsed_time > self.max_time or dist_to_goal > self.max_distance:
+            print 'time elapsed', self.t, elapsed_time
+            print 'distance to goal', dist_to_goal
+            return True    
         return False
 
     def getReward(self):
@@ -449,18 +524,29 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         #  0.01 reward for close to goal
         #  return reward inversely proportional to heading error otherwise
         
-        r_factor = 0.0001
+        r_factor = 0.01
+        rh_factor = 0.00001
 
         if np.abs(self.env.getTilt()) > self.max_tilt:
             return -1.0
         else:
-            temp = self.calc_dist_to_goal()
+            distance = self.calc_dist_to_goal()
             heading = self.calc_angle_to_goal()
-            if (temp < 1e-3):
+            if (distance > self.max_distance):
+                print 'MAX DISTANCE REACHED'
+                return -1.0
+            if (distance < 1e-3):
                 print 'DEBUG: GOAL REACHED'
                 return 0.01
             else:
-                return (0.95 - heading**2) * r_factor
+                #return (0.95 - heading**2) * r_factor
+                # TODO, add a reward that is 
+                # inversly proportional to distance 
+                heading_reward = 0.1/(heading**2 + 0.1) * r_factor
+                dist_reward = -distance**2 * rh_factor
+                #return 0.1/(heading**2 + 0.1) * r_factor
+                #return heading_reward + dist_reward
+                return 1/distance
 
     def calc_dist_to_goal(self):
         # ported from Randlov's C code. See bike.c for the source
@@ -532,10 +618,10 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         f2g = [(xf - x_goal), (yf - y_goal)] 
         b2f = [(xf - xb), (yf - yb)]
         temp = np.dot(f2g,b2f)/(np.linalg.norm(f2g) * np.linalg.norm(b2f))
+        #print temp
         temp = np.arccos(temp)
 
-        return temp
-        
+        return temp       
         
 class LinearFATileCoding3476BalanceTask(LinearFATileCoding3476GoToTask):
     """ This class will implement the balance task using tiled states for 

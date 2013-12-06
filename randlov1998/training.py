@@ -293,6 +293,9 @@ class LinearFATraining(Training):
 
 class LinearFATraining_setAlpha(LinearFATraining):
     def rehearse(self, irehearsal, n_episodes_per_rehearsal):
+        # simply modified  from LinearFATraining to print the reduced_rate 
+        # learning rate parameter
+        
         r = self.exp.doEpisodes(n_episodes_per_rehearsal)
         # Discounted reward/return (I think):
         cumreward = self.exp.task.getTotalReward()

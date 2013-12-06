@@ -16,6 +16,13 @@ class Environment(GraphicalEnvironment):
 
     # Environment parameters.
     time_step = 0.01
+    
+    # Goal position and radius
+    # Lagouakis (2002) uses angle to goal, not heading, as a state
+    x_goal = 100.
+    y_goal = 100.
+    r_goal = 10.
+    max_distance = 1000.
 
     # Acceleration on Earth's surface due to gravity (m/s^2):
     g = 9.82
@@ -70,9 +77,12 @@ class Environment(GraphicalEnvironment):
 
     def getYB(self):
         return self.sensors[8]
-
+        
     def getPSI(self):
         return self.sensors[9]
+     
+    def getPSIG(self):
+        return self.sensors[10]    
 
     def get_xfhist(self):
         return self.xfhist
@@ -102,7 +112,7 @@ class Environment(GraphicalEnvironment):
         # Want to ignore the previous value of omegadd; it could only cause a
         # bug if we assign to it.
         (theta, thetad, omega, omegad, _,
-                xf, yf, xb, yb, psi) = self.sensors
+                xf, yf, xb, yb, psi, psig) = self.sensors
         (T, d) = self.actions
 
         # For recordkeeping.
@@ -204,9 +214,22 @@ class Environment(GraphicalEnvironment):
                 #    dy_by_dx = delta_y / delta_x
                 psi = sign(xb - xf) * 0.5 * np.pi - arctan(delta_y / (xb - xf))
                # dy_by_dx))
+        
+        # Update angle to goal, psig (Lagoudakis, 2002, calls this "psi")
+        # --------------------
+        yg = self.y_goal
+        xg = self.x_goal
+        delta_yg = yg - yb
+        if (xg == xb) and delta_yg < 0.0:
+            psig = psi - np.pi
+        else:
+            if delta_y > 0.0:
+                psig = psi - ( arctan((xb - xg) / delta_yg) )
+            else:
+                psig = psi - (sign(xb - xg) * 0.5 * np.pi - arctan(delta_yg / (xb - xg)) )
 
         self.sensors = np.array([theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi])
+                xf, yf, xb, yb, psi, psig])
 
         if self.hasRenderer():
             self.getRenderer().updateData(self.sensors)
@@ -223,8 +246,9 @@ class Environment(GraphicalEnvironment):
         xb = 0
         yb = 0
         psi = np.arctan((xb - xf) / (yf - yb))
+        psig = psi - np.arctan((xb - self.x_goal) / (self.y_goal - yb))
         self.sensors = np.array([theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi])
+                xf, yf, xb, yb, psi, psig])
         self.xfhist = []
         self.yfhist = []
         self.xbhist = []
