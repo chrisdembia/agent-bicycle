@@ -7,11 +7,18 @@ from tasks import LSPIGotoTask
 from training import LinearFATraining
 
 task = LSPIGotoTask(butt_disturbance_amplitude = 0.0000)
-learner = LSPI(task.nactions, task.outdim)
+learner = LSPI(task.nactions, task.outdim,
+        learningRateDecay=1000, randomInit=False)
+task.env.x_goal = 3
+task.env.y_goal = 15
+task.env.r_goal = 2
 # TODO this LSPI does not have eligibility traces.
-#learner._lambda = 0.95
+learner.rewardDiscount = 0.8
+learner.exploring = True
 task.discount = learner.rewardDiscount
 agent = LinearFA_Agent(learner)
+agent.epsilonGreedy = True
+agent.init_exploration = 0.3
 # The state has a huge number of dimensions, and the logging causes me to run
 # out of memory. We needn't log, since learning is done online.
 agent.logging = False
@@ -23,15 +30,8 @@ performance_agent.greedy = True
 performance_agent.learning = False
 experiment = EpisodicExperiment(task, agent)
 
-# TODO PyBrain says that the learning rate needs to decay, but I don't see that
-# described in Randlov's paper.
-# A higher number here means the learning rate decays slower.
-learner.learningRateDecay = 800
-# NOTE increasing this number above from the default of 100 is what got the
-# learning to actually happen, and fixed the bug/issue where the performance
-# agent's performance stopped improving.
 
 tr = LinearFATraining('goto_lspi', experiment,
         performance_agent, verbose=True)
 
-tr.train(200000, performance_interval=10, n_performance_episodes=5)
+tr.train(2000, performance_interval=10, n_performance_episodes=1)
