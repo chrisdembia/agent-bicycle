@@ -98,6 +98,7 @@ class Game(ShowBase):
         self.noise_mag = noise_mag
         if task:
             self.task = task
+            self.task._butt_disturbance_amplitude = self.noise_mag
             self.bike = self.task.env
             self.bike.reset()
         else:
@@ -210,6 +211,7 @@ class Game(ShowBase):
         if self.agent and self.task:
             self.agent.integrateObservation(self.task.getObservation())
             self.task.performAction(self.agent.getAction())
+            butt_disp_w_noise = self.bike.actions[1]
         else:
             self.bike.actions = [self.torque, butt_disp_w_noise]
             self.bike.step()

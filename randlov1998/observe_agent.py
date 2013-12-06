@@ -19,4 +19,4 @@ performance_agent.logging = False
 performance_agent.greedy = True
 performance_agent.learning = False
 
-Game(performance_agent, task).run()
+Game(performance_agent, task, noise_mag=0.2).run()

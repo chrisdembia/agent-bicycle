@@ -145,14 +145,14 @@ class Training:
                 plt.figure(figsize=(8, 4))
                 nplots = 2
             plt.suptitle(self.name, fontweight='bold')
-            if (hasattr(self.exp.task, 'x_goal') and
-                    hasattr(self.exp.task, 'y_goal') and
-                    hasattr(self.exp.task, 'r_goal')):
+            if (hasattr(self.exp.task.env, 'x_goal') and
+                    hasattr(self.exp.task.env, 'y_goal') and
+                    hasattr(self.exp.task.env, 'r_goal')):
                 plt.subplot(1, nplots, 2)
                 t = linspace(0, 2 * pi, 100)
-                r = self.exp.task.r_goal
-                xc = self.exp.task.x_goal
-                yc = self.exp.task.y_goal
+                r = self.exp.task.env.r_goal
+                xc = self.exp.task.env.x_goal
+                yc = self.exp.task.env.y_goal
                 x = xc + r * cos(t)
                 y = yc + r * sin(t)
                 plt.plot(x, y, 'g')
