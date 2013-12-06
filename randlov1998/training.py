@@ -4,7 +4,8 @@ import os
 import traceback
 import shutil
 
-from numpy import mean, array_str, empty, savetxt, arange
+from numpy import mean, array_str, empty, savetxt, arange, linspace, cos, sin
+from numpy import pi
 from matplotlib import pyplot as plt
 
 from pybrain.tools.customxml.networkwriter import NetworkWriter
@@ -144,6 +145,18 @@ class Training:
                 plt.figure(figsize=(8, 4))
                 nplots = 2
             plt.suptitle(self.name, fontweight='bold')
+            if (hasattr(self.exp.task, 'x_goal') and
+                    hasattr(self.exp.task, 'y_goal') and
+                    hasattr(self.exp.task, 'r_goal')):
+                plt.subplot(1, nplots, 2)
+                t = linspace(0, 2 * pi, 100)
+                r = self.exp.task.r_goal
+                xc = self.exp.task.x_goal
+                yc = self.exp.task.y_goal
+                x = xc + r * cos(t)
+                y = yc + r * sin(t)
+                plt.plot(x, y, 'g')
+                
 
         success_metric_history = []
         irehearsal = -1

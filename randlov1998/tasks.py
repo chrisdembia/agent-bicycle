@@ -517,6 +517,7 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
             print 'time elapsed', self.t, elapsed_time
             print 'distance to goal', dist_to_goal
             return True    
+
         return False
 
     def getReward(self):
