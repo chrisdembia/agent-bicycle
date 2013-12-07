@@ -30,7 +30,7 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
     # pi/15. These are actually equivalent.
     #max_tilt = 12.0 * np.pi / 180.0
     max_tilt = np.pi / 15.0
-
+    #max_tilt = np.pi / 6. 
     nactions = 9
 
     def __init__(self, butt_disturbance_amplitude=0.02, only_steer=False,
@@ -343,12 +343,43 @@ class LSPIBalanceTask(BalanceTask):
 class LSPIGotoTask(BalanceTask):
     """Lagoudakis, 2002, trying to implement the balance + goto task
     """
-    lastdist = 0
-    lasttilt = 0
-    
+        
+    def __init__(self, five_actions = False, *args, **kwargs):
+        BalanceTask.__init__(self, *args,**kwargs)
+        self.five_actions = five_actions        
+        
     @property 
     def outdim(self):
         return 20
+        
+    def performAction(self, action):
+        """ adding the option to use an action space of size 5, where 
+        we either apply a torque (+/- 2.0), displace the butt (+/- 0.02),
+        or do nothing (ala, Lagoudakis).
+        """
+        if self.five_actions:
+            p = 2.0 * np.random.rand() - 1.0
+            T = 0
+            d = self._butt_disturbance_amplitude * p
+            
+            self.t += 1
+            self.action_history += one_to_n(action[0], self.nactions)
+            
+            # Map the action integer to a torque and displacement.
+            assert round(action[0]) == action[0]
+            if action[0] == 0:
+                T = -2
+            elif action[0] == 1:
+                T = 2
+            elif action[0] == 2:
+                d -= 0.02
+            elif action[0] == 3:
+                d += 0.02  
+                
+            super(BalanceTask, self).performAction([T, d])
+            
+        else:
+            BalanceTask.performAction(self, action)
         
     def getPhi(self, theta, thetad, omega, omegad, omegadd, psig):
         # from Lagoudakis
@@ -434,6 +465,7 @@ class LSPIGotoTask(BalanceTask):
         temp = np.max([0, sqrd_dist_to_goal - r_goal**2])
 
         return np.sqrt(temp)    
+        
         
 class LinearFATileCoding3476GoToTask(BalanceTask):
     """An attempt to exactly implement Randlov's function approximation. He
