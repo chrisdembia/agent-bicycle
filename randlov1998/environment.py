@@ -19,8 +19,8 @@ class Environment(GraphicalEnvironment):
     
     # Goal position and radius
     # Lagouakis (2002) uses angle to goal, not heading, as a state
-    x_goal = 20.
-    y_goal = 50.
+    x_goal = 10.
+    y_goal = 20.
     r_goal = 5.
     max_distance = 1000.
     
@@ -54,8 +54,9 @@ class Environment(GraphicalEnvironment):
     Itot = 13.0 / 3.0 * Mc * h**2 + Mp * (h + dCM)**2
     sigmad = v / r
 
-    def __init__(self):
+    def __init__(self, randomInitState):
         GraphicalEnvironment.__init__(self)
+        self.randomInitState = randomInitState
         self.reset()
         self.actions = [0.0, 0.0]
         self.fid = open('record.txt', 'w')
@@ -247,15 +248,42 @@ class Environment(GraphicalEnvironment):
 
 
     def reset(self):
-        theta = 0
-        thetad = 0
-        omega = 0
-        omegad = 0
-        omegadd = 0
-        xf = 0
-        yf = self.L
-        xb = 0
-        yb = 0
+        # Lagoudakis (2002) randomizes the initial state "arout the 
+        # equilibrium position"
+
+        if self.randomInitState:
+            theta = np.random.normal(0,2)*np.pi/180
+            thetad = 0
+            #thetad = np.random.normal(0,2)
+            omega = np.random.normal(0,2)*np.pi/180
+            #omegad = np.random.normal(0,2)
+            #omegadd = np.random.normal(0,2)
+            omegad = 0
+            omegadd = 0
+            # randomize rear tire location
+            #xb = np.random.normal(0,10)
+            #yb = np.random.normal(0,10)
+            
+            xb = 0
+            yb = 0
+            xf  = xb + (np.random.rand(1)*2*self.L - self.L)
+            yf = np.sqrt(self.L**2 - (xf-xb)**2) + yb
+            
+            #print 'DEBUG: Random init states'
+            #print theta, thetad, omega, omegad, omegadd
+            #print xb, yb, xf, yf
+        
+        else:   
+            theta = 0
+            thetad = 0
+            omega = 0
+            omegad = 0
+            omegadd = 0
+            xf = 0
+            yf = self.L
+            xb = 0
+            yb = 0
+        
         psi = np.arctan((xb - xf) / (yf - yb))
         psig = psi - np.arctan((xb - self.x_goal) / (self.y_goal - yb))
         self.sensors = np.array([theta, thetad, omega, omegad, omegadd,

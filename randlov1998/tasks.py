@@ -34,21 +34,21 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
     nactions = 9
 
     def __init__(self, butt_disturbance_amplitude=0.02, only_steer=False,
-            max_time=1000.0):
+            max_time=1000.0, randomInitState = False):
         """
         Parameters
         ----------
         butt_disturbance_amplitude : float; optional
             In meters.
         """
-        super(BalanceTask, self).__init__(Environment())
+        super(BalanceTask, self).__init__(Environment(randomInitState))
         # Keep track of time in case we want to end episodes based on number of
         # time steps.
         self._butt_disturbance_amplitude = butt_disturbance_amplitude
         self.only_steer = only_steer
         self.max_time = max_time
         self.t = 0
-
+        
         # TODO Sensor limits to normalize the sensor readings.
         # TODO Actor limits.
         #T_limits = (-2, 2) # Newtons.
@@ -345,19 +345,17 @@ class LSPIGotoTask(BalanceTask):
     """
         
     def __init__(self, five_actions = False, *args, **kwargs):
-        BalanceTask.__init__(self,*args,**kwargs)
-        self.five_actions = five_actions
-        
+        BalanceTask.__init__(self, *args,**kwargs)
+        self.five_actions = five_actions        
         
     @property 
     def outdim(self):
         return 20
         
     def performAction(self, action):
-        """Incoming action is an int between 0 and 4. The action we provide to
-        the environment consists of a torque T in {-2 N, 2 N}, and a
-        displacement d in {-.02 m, 0, 0.02 m}.
-
+        """ adding the option to use an action space of size 5, where 
+        we either apply a torque (+/- 2.0), displace the butt (+/- 0.02),
+        or do nothing (ala, Lagoudakis).
         """
         if self.five_actions:
             p = 2.0 * np.random.rand() - 1.0
@@ -601,7 +599,6 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
                 #return 0.1/(heading**2 + 0.1) * r_factor
                 #return heading_reward + dist_reward
                 return 1/distance
-
 
     def calc_dist_to_goal(self):
         # ported from Randlov's C code. See bike.c for the source

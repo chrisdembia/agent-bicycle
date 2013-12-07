@@ -231,9 +231,9 @@ class Game(ShowBase):
                 (np.random.rand() - 1.0))
         
         # update text parameters
-        tiltstr       = "Tilt                    = %3.3f" %(self.bike.getTilt())
+        tiltstr       = "Tilt                        = %3.3f" %(self.bike.getTilt())
         diststr      = "Distance to goal = %3.3f" %(self.task.calc_dist_to_goal())
-        rewardstr = "Reward             = %3.3f" %(self.task.getReward())
+        rewardstr = "Reward                = %3.3f" %(self.task.getReward())
         
         self.tiltText.setText(tiltstr)
         self.distText.setText(diststr)
