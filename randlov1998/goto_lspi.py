@@ -17,8 +17,6 @@ learner.rewardDiscount = 0.8
 learner.exploring = True
 task.discount = learner.rewardDiscount
 agent = LinearFA_Agent(learner)
-agent.epsilonGreedy = True
-agent.init_exploration = 0.3
 # The state has a huge number of dimensions, and the logging causes me to run
 # out of memory. We needn't log, since learning is done online.
 agent.logging = False

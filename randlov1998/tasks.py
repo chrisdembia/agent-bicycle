@@ -390,16 +390,36 @@ class LSPIGotoTask(BalanceTask):
     def getReward(self):
         # Lagoudakis (2002) reward function
         # reward = (net change in tilt^2) + (net change in dist_to_goal^2) * 0.01
+        delta_tilt = self.env.getTilt()**2 - self.env.last_omega**2
+        delta_dist = self.calc_dist_to_goal() - self.calc_last_dist_to_goal()
+                
+        return -delta_tilt - delta_dist * 0.01
         
         # trying a simple proportional reward first
-        dist_to_goal = self.calc_dist_to_goal()
+        #dist_to_goal = self.calc_dist_to_goal()
+        #if dist_to_goal == 0:
+        #    return 1
         # range [0.1856 - 1]
-        tiltReward = 1/((10*self.env.getTilt())**2 + 1)
+        #tiltReward = 1/((10*self.env.getTilt())**2 + 1)
         # ~0.1 to ~1
-        distReward = 100/(dist_to_goal + 1.)
-        headingReward = 10/((10*self.env.getPSIG())**2 + 1)
-        return tiltReward + distReward + headingReward
-                
+        #distReward = 10/dist_to_goal
+        #headingReward = 5/((10*self.env.getPSIG())**2 + 1)
+        #print tiltReward, distReward, headingReward
+        #return tiltReward + distReward + headingReward
+    
+    def calc_last_dist_to_goal(self):
+        x_goal = self.env.x_goal
+        y_goal = self.env.y_goal
+        r_goal = self.env.r_goal
+        
+        last_xf = self.env.last_xf
+        last_yf = self.env.last_yf
+        
+        sqrd_dist_to_goal = ( x_goal - last_xf )**2 + ( y_goal - last_yf )**2 
+        temp = np.max([0, sqrd_dist_to_goal - r_goal**2])
+
+        return np.sqrt(temp)    
+        
     def calc_dist_to_goal(self):
         # Returns distance to goal. Distance is zero whenever the
         # front tire is within the goal radius.
@@ -421,6 +441,9 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
     heading states) tiles.
     """
     # Goal position and radius
+    x_goal = 5.
+    y_goal = 20.
+    r_goal = 10.
     max_distance = 1000
 
     # From Randlov, 1998:
@@ -436,8 +459,6 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
     omegadd_bounds = np.array(
             [-np.inf, -2.0, 0, 2.0, np.inf])
     psi_bounds = (np.pi/180) * np.array( range(0,360,18) )
-
-    only_balance = False
 
     # http://stackoverflow.com/questions/3257619/numpy-interconversion-between-multidimensional-and-linear-indexing
     nbins_across_dims = [ 
@@ -529,26 +550,23 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         if np.abs(self.env.getTilt()) > self.max_tilt:
             return -1.0
         else:
-            if self.only_balance:
-                return 0.0
+            distance = self.calc_dist_to_goal()
+            heading = self.calc_angle_to_goal()
+            if (distance > self.max_distance):
+                print 'MAX DISTANCE REACHED'
+                return -1.0
+            if (distance < 1e-3):
+                print 'DEBUG: GOAL REACHED'
+                return 0.01
             else:
-                distance = self.calc_dist_to_goal()
-                heading = self.calc_angle_to_goal()
-                if (distance > self.max_distance):
-                    print 'MAX DISTANCE REACHED'
-                    return -1.0
-                if (distance < 1e-3):
-                    print 'DEBUG: GOAL REACHED'
-                    return 0.01
-                else:
-                    #return (0.95 - heading**2) * r_factor
-                    # TODO, add a reward that is 
-                    # inversly proportional to distance 
-                    heading_reward = 0.1/(heading**2 + 0.1) * r_factor
-                    dist_reward = -distance**2 * rh_factor
-                    #return 0.1/(heading**2 + 0.1) * r_factor
-                    #return heading_reward + dist_reward
-                    return 1/distance
+                #return (0.95 - heading**2) * r_factor
+                # TODO, add a reward that is 
+                # inversly proportional to distance 
+                heading_reward = 0.1/(heading**2 + 0.1) * r_factor
+                dist_reward = -distance**2 * rh_factor
+                #return 0.1/(heading**2 + 0.1) * r_factor
+                #return heading_reward + dist_reward
+                return 1/distance
 
 
     def calc_dist_to_goal(self):
@@ -556,9 +574,9 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         # code.
 
         # unpack variables
-        x_goal = self.env.x_goal
-        y_goal = self.env.y_goal
-        r_goal = self.env.r_goal
+        x_goal = self.x_goal
+        y_goal = self.y_goal
+        r_goal = self.r_goal
         xf = self.env.getXF()
         yf = self.env.getYF()
 
@@ -597,8 +615,8 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
 
 
         # unpack variables
-        x_goal = self.env.x_goal
-        y_goal = self.env.y_goal
+        x_goal = self.x_goal
+        y_goal = self.y_goal
         xf = self.env.getXF()
         xb = self.env.getXB()
         yf = self.env.getYF()
