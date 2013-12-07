@@ -7,6 +7,10 @@ from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.actor.Actor import Actor
 from direct.showbase import DirectObject
+from direct.gui.OnscreenText import OnscreenText
+from panda3d.core import TextNode
+
+
 
 from environment import Environment
 from tasks import BalanceTask
@@ -79,7 +83,7 @@ class LearningVisualization(ShowBase):
         self.handlebar.setHpr(0, 0, 90)
 
         self.camera.setPos(5, -5, 10)
-
+        
     # Define a procedure to move the camera.
     def followBikeTask(self, task):
         look = self.rear_wheel.getPos()
@@ -94,6 +98,16 @@ class Game(ShowBase):
     rad2deg = 180. / 3.14
     def __init__(self, agent=None, task=None, noise_mag=0.02):
         ShowBase.__init__(self)
+        
+        # add some text 
+        self.title = OnscreenText(text="Test",
+                              style=1, fg=(1,1,1,1),
+                              pos=(0.9,-0.95), scale = .07)
+                              
+        self.tiltText = self.genLabelText("Bike tilt", 1)
+        self.distText = self.genLabelText("Distance to goal", 2)
+        self.rewardText = self.genLabelText("Current reward", 3)
+        
         self.agent = agent
         self.noise_mag = noise_mag
         if task:
@@ -204,10 +218,27 @@ class Game(ShowBase):
 
     def printHello(self):
         print "hello"
-
+    
+    #Macro-like function used to reduce the amount to code needed to create the
+    #on screen instructions
+    def genLabelText(self, text, i):
+        textObject = OnscreenText(text = text, pos = (-1.3, .95-.05*i), fg=(1,1,0,1),
+                      align = TextNode.ALeft, scale = .05)
+        return textObject
+                      
     def simulateBicycleTask(self, task):
         butt_disp_w_noise = self.butt_displacement + self.noise_mag * (2.0 *
                 (np.random.rand() - 1.0))
+        
+        # update text parameters
+        tiltstr       = "Tilt                    = %3.3f" %(self.bike.getTilt())
+        diststr      = "Distance to goal = %3.3f" %(self.task.calc_dist_to_goal())
+        rewardstr = "Reward             = %3.3f" %(self.task.getReward())
+        
+        self.tiltText.setText(tiltstr)
+        self.distText.setText(diststr)
+        self.rewardText.setText(rewardstr)
+        
         if self.agent and self.task:
             self.agent.integrateObservation(self.task.getObservation())
             self.task.performAction(self.agent.getAction())
