@@ -6,11 +6,16 @@ from environment import Environment
 from tasks import LSPIGotoTask
 from training import LinearFATraining
 
-task = LSPIGotoTask(butt_disturbance_amplitude = 0.0000, five_actions = True, randomInitState = True)
+task = LSPIGotoTask(butt_disturbance_amplitude = 0.0000, randomInitState = True, five_actions = True,  rewardType = 1)
 learner = LSPI(task.nactions, task.outdim)
+
 # TODO this LSPI does not have eligibility traces.
 #learner._lambda = 0.95
+
+# lagoudakis uses 0.8 discount factor
+learner.rewardDiscount = 0.80
 task.discount = learner.rewardDiscount
+
 agent = LinearFA_Agent(learner)
 # The state has a huge number of dimensions, and the logging causes me to run
 # out of memory. We needn't log, since learning is done online.

@@ -344,9 +344,13 @@ class LSPIGotoTask(BalanceTask):
     """Lagoudakis, 2002, trying to implement the balance + goto task
     """
         
-    def __init__(self, five_actions = False, *args, **kwargs):
+    def __init__(self, five_actions = False, rewardType = 1,*args, **kwargs):
         BalanceTask.__init__(self, *args,**kwargs)
-        self.five_actions = five_actions        
+        self.five_actions = five_actions
+        if self.five_actions :
+            self.nactions = 5
+            self.action_history = np.zeros(self.nactions)
+        self.rewardType = rewardType
         
     @property 
     def outdim(self):
@@ -421,22 +425,27 @@ class LSPIGotoTask(BalanceTask):
     def getReward(self):
         # Lagoudakis (2002) reward function
         # reward = (net change in tilt^2) + (net change in dist_to_goal^2) * 0.01
-        delta_tilt = self.env.getTilt()**2 - self.env.last_omega**2
-        delta_dist = self.calc_dist_to_goal() - self.calc_last_dist_to_goal()
+        if self.rewardType == 1 :
+            # Lagoudakis reward function
+            delta_tilt = self.env.getTilt()**2 - self.env.last_omega**2
+            delta_dist = self.calc_dist_to_goal() - self.calc_last_dist_to_goal()
+            return -delta_tilt - delta_dist * 0.01
                 
-        return -delta_tilt - delta_dist * 0.01
-        
-        # trying a simple proportional reward first
-        #dist_to_goal = self.calc_dist_to_goal()
-        #if dist_to_goal == 0:
-        #    return 1
-        # range [0.1856 - 1]
-        #tiltReward = 1/((10*self.env.getTilt())**2 + 1)
-        # ~0.1 to ~1
-        #distReward = 10/dist_to_goal
-        #headingReward = 5/((10*self.env.getPSIG())**2 + 1)
-        #print tiltReward, distReward, headingReward
-        #return tiltReward + distReward + headingReward
+        if self.rewardType == 2 :
+            # proportional reward
+            if np.abs(self.env.getTilt()) > self.max_tilt:
+                return -1000
+                
+            dist_to_goal = self.calc_dist_to_goal()
+            if dist_to_goal == 0:
+                return 1
+            # range [0.1856 - 1]
+            tiltReward = 1/((10*self.env.getTilt())**2 + 1)
+            # ~0.1 to ~1
+            distReward = 10/dist_to_goal
+            headingReward = 5/((10*self.env.getPSIG())**2 + 1)
+            #print tiltReward, distReward, headingReward
+            return tiltReward + distReward + headingReward   
     
     def calc_last_dist_to_goal(self):
         x_goal = self.env.x_goal
