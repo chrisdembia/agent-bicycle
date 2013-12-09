@@ -252,10 +252,10 @@ class Environment(GraphicalEnvironment):
         # equilibrium position"
 
         if self.randomInitState:
-            theta = np.random.normal(0,2)*np.pi/180
+            theta = np.random.normal(0,1)*np.pi/180
             thetad = 0
             #thetad = np.random.normal(0,2)
-            omega = np.random.normal(0,2)*np.pi/180
+            omega = np.random.normal(0,1)*np.pi/180
             #omegad = np.random.normal(0,2)
             #omegadd = np.random.normal(0,2)
             omegad = 0
@@ -266,7 +266,7 @@ class Environment(GraphicalEnvironment):
             
             xb = 0
             yb = 0
-            xf  = xb + (np.random.rand(1)*2*self.L - self.L)
+            xf  = xb + (np.random.rand(1)*self.L - 0.5*self.L)
             yf = np.sqrt(self.L**2 - (xf-xb)**2) + yb
             
             #print 'DEBUG: Random init states'
