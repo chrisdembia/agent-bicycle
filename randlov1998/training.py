@@ -95,7 +95,8 @@ class Training:
     def train(self, n_max_rehearsals, do_plot=True, performance_interval=10,
             n_performance_episodes=5, serialization_interval=10,
             n_episodes_per_rehearsal=1, plotsave_interval=100,
-            plot_action_history=False):
+            plot_action_history=False, plot_rehearsal_trajectory=False,
+            plot_goal_circle=True):
         """Training consists of a loop of (1) rehearsing, (2) plotting the
         reward and bicycle wheel trajectory, and (3) writing output to a file
         (including the learner; e.g., weights).
@@ -137,6 +138,7 @@ class Training:
         if do_plot:
             self.exp.task.env.saveWheelContactTrajectories(True)
             plt.ion()
+            self.c_last = [0.8, 0.8, 0.8]
             if plot_action_history:
                 plt.figure(figsize=(12, 4))
                 nplots = 3
@@ -147,7 +149,7 @@ class Training:
             plt.suptitle(self.name, fontweight='bold')
             if (hasattr(self.exp.task.env, 'x_goal') and
                     hasattr(self.exp.task.env, 'y_goal') and
-                    hasattr(self.exp.task.env, 'r_goal')):
+                    hasattr(self.exp.task.env, 'r_goal') and plot_goal_circle):
                 plt.subplot(1, nplots, 2)
                 t = linspace(0, 2 * pi, 100)
                 r = self.exp.task.env.r_goal
@@ -169,6 +171,13 @@ class Training:
             # Rehearse.
             self.rehearse(irehearsal, n_episodes_per_rehearsal)
 
+            if do_plot and plot_rehearsal_trajectory:
+                plt.subplot(1, nplots, 2)
+                self._update_wheel_trajectories()
+                plt.draw()
+                plt.pause(0.001)
+
+
             # Perform.
             if irehearsal % performance_interval == 0:
                 success_metric_history.append(
@@ -180,7 +189,7 @@ class Training:
                     plt.plot(success_metric_history, '.--')
                     # Wheel trajectories.
                     plt.subplot(1, nplots, 2)
-                    self._update_wheel_trajectories()
+                    self._update_wheel_trajectories([0.9, 0.9, 0])
                     # Necessary (?) plotting mechanics.
 
                     if plot_action_history:
@@ -196,15 +205,16 @@ class Training:
             if irehearsal % serialization_interval == 0:
                 self.serialize(irehearsal)
 
-    def _update_wheel_trajectories(self):
+    def _update_wheel_trajectories(self, c=[0.8, 0.8, 0.8]):
         # Grey out previous lines.
         for line in self.front_lines:
-            line.set_color([0.8, 0.8, 0.8])
+            line.set_color(self.c_last)
         for line in self.back_lines:
-            line.set_color([0.8, 0.8, 0.8])
+            line.set_color(self.c_last)
         env = self.exp.task.env
         self.front_lines = plt.plot(env.get_xfhist(), env.get_yfhist(), 'r')
         self.back_lines = plt.plot(env.get_xbhist(), env.get_ybhist(), 'b')
+        self.c_last = c
         #plt.plot(self.exp.task.bin_count)
         plt.axis('equal')
 
@@ -289,6 +299,8 @@ class LinearFATraining(Training):
     def __del__(self):
         self.thetafile.close()
     def rehearse(self, irehearsal, n_episodes_per_rehearsal):
+        if self.exp.agent.learner.learningRate < 0.002:
+            raise Exception('Learning rate hit 0.002. Aborting.')
         r = self.exp.doEpisodes(n_episodes_per_rehearsal)
         if self.batch: self.exp.agent.learn()
         # Discounted reward/return (I think):
@@ -308,7 +320,8 @@ class LinearFATraining_setAlpha(LinearFATraining):
     def rehearse(self, irehearsal, n_episodes_per_rehearsal):
         # simply modified  from LinearFATraining to print the reduced_rate 
         # learning rate parameter
-        
+        if self.exp.agent.learner.learningRate < 0.002:
+            raise Exception('Learning rate hit 0.002. Aborting.')
         r = self.exp.doEpisodes(n_episodes_per_rehearsal)
         # Discounted reward/return (I think):
         cumreward = self.exp.task.getTotalReward()

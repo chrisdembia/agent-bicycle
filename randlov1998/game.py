@@ -1,3 +1,6 @@
+
+
+import sys
 import time
 from math import pi, sin, cos
 
@@ -11,7 +14,6 @@ from direct.gui.OnscreenText import OnscreenText
 from panda3d.core import TextNode
 
 
-
 from environment import Environment
 from tasks import BalanceTask
 
@@ -20,84 +22,14 @@ from tasks import BalanceTask
 # TODO flashy environment.
 # TODO more colorful bike objects (how come we can't set their color?).
  
-class LearningVisualization(ShowBase):
-
-    rad2deg = 180. / 3.14
-    def __init__(self, r, L):
-        ShowBase.__init__(self)
-        self.r = r
-        self.L = L
- 
-        # Load the environment model.
-        #self.environ = self.loader.loadModel("models/environment")
-        self.environ = self.loader.loadModel("Ground2.egg")
-        ## Reparent the model to render.
-        self.environ.reparentTo(self.render)
-        # Apply scale and position transforms on the model.
-        #self.environ.setScale(0.25, 0.25, 0.25)
-        #self.environ.setPos(-8, 42, 0)
-
-        # Disable the use of the mouse to control the camera.
-        self.disableMouse()
-
-        # "out-of-body experience"; toggles camera control.
-        self.accept('o', self.oobe)
-
-        # Add the spinCameraTask procedure to the task manager.
-        self.taskMgr.add(self.followBikeTask, "FollowBikeTask")
-
-#        self.axes = self.loader.loadModel("misc/xyzAxis.egg")
-#        self.axes.reparentTo(self.render)
-#        self.axes.setPos(-0, 0, 0)
-
-        self.rear_wheel = self.loader.loadModel("wheel3.egg")
-        self.rear_wheel.reparentTo(self.render)
-        self.rear_wheel.setPos(0, 0, self.r)
-
-        self.frame = self.loader.loadModel("frame.egg")
-        self.frame.reparentTo(self.rear_wheel)
-        self.frame.setColor(1, 0, 0)
-
-#        self.butt = self.loader.loadModel("frame.egg")
-#        self.butt.reparentTo(self.frame)
-#        self.butt.setColor(1, 0, 0)
-#        self.butt.setScale(1, 0.1, 1)
-#        self.butt.setZ(1.5 * self.r)
-#        self.butt.setY(0.3 * self.L)
-
-        self.fork = self.loader.loadModel("fork.egg")
-        self.fork.reparentTo(self.frame)
-        self.fork.setColor(0, 0, 1)
-        ## 1 unit in the scaled space of this node is self.L in self.render
-        self.fork.setPos(0, self.L, self.r)
-
-        self.front_wheel = self.loader.loadModel("wheel3.egg")
-        self.front_wheel.reparentTo(self.fork)
-        self.front_wheel.setColor(1, 1, 1)
-        self.front_wheel.setPos(0, 0, -self.r)
-
-        self.handlebar = self.loader.loadModel("fork.egg")
-        self.handlebar.reparentTo(self.fork)
-        self.handlebar.setColor(0, 0, 1)
-        self.handlebar.setPos(0, 0, self.r)
-        self.handlebar.setHpr(0, 0, 90)
-
-        self.camera.setPos(5, -5, 10)
-        
-    # Define a procedure to move the camera.
-    def followBikeTask(self, task):
-        look = self.rear_wheel.getPos()
-        self.camera.lookAt(look[0], look[1], look[2] + 1.0)
-        self.camera.setPos(look[0] - 1.0, look[1] - 6.0, look[2] + 2.0)
-    
-        #self.camera.setPos(*self.rear_wheel.getPos())
-        return Task.cont
- 
 class Game(ShowBase):
 
     rad2deg = 180. / 3.14
-    def __init__(self, agent=None, task=None, noise_mag=0.02):
+    def __init__(self, agent=None, task=None, noise_mag=0.02,
+            slowdown_factor=1.0):
         ShowBase.__init__(self)
+
+        self.slowdown_factor = slowdown_factor
         
         # add some text 
         self.title = OnscreenText(text="Test",
@@ -148,8 +80,12 @@ class Game(ShowBase):
 #        self.axes.reparentTo(self.render)
 #        self.axes.setPos(-0, 0, 0)
 
+        self.platform = self.loader.loadModel("frame.egg")
+        self.platform.reparentTo(self.render)
+        self.platform.setColor(1, 0, 0)
+
         self.rear_wheel = self.loader.loadModel("wheel3.egg")
-        self.rear_wheel.reparentTo(self.render)
+        self.rear_wheel.reparentTo(self.platform)
         self.rear_wheel.setPos(0, 0, self.bike.r)
 
         self.frame = self.loader.loadModel("frame.egg")
@@ -213,9 +149,9 @@ class Game(ShowBase):
 
     # Define a procedure to move the camera.
     def followBikeTask(self, task):
-        look = self.rear_wheel.getPos()
-        self.camera.lookAt(look[0], look[1], look[2] + 1.0)
-        self.camera.setPos(look[0] - 1.0, look[1] - 6.0, look[2] + 2.0)
+        look = self.platform.getPos()
+        self.camera.lookAt(look[0], look[1], look[2] + 1.3)
+        self.camera.setPos(look[0] - 1.0, look[1] - 6.0, look[2] + 2.3)
     
         #self.camera.setPos(*self.rear_wheel.getPos())
         return Task.cont
@@ -235,10 +171,12 @@ class Game(ShowBase):
                 (np.random.rand() - 1.0))
         
         # update text parameters
-        tiltstr       = "Tilt                        = %3.6f" %(self.bike.getTilt())
-        diststr      = "Distance to goal = %3.6f" %(self.task.calc_dist_to_goal())
-        rewardstr = "Reward                = %3.6f" %(self.task.getReward())
-        
+        if self.task.goto:
+            diststr      = "Distance to goal = %3.3f" %(self.task.calc_dist_to_goal())            
+        else:
+            diststr      = "Distance traveled = "            
+        tiltstr       = "Tilt                        = %3.3f" %(self.bike.getTilt())
+        rewardstr = "Reward                = %3.3f" %(self.task.getReward())
         self.tiltText.setText(tiltstr)
         self.distText.setText(diststr)
         self.rewardText.setText(rewardstr)
@@ -252,15 +190,14 @@ class Game(ShowBase):
             self.bike.step()
         if abs(self.bike.getTilt()) < BalanceTask.max_tilt:
             self.wheel_roll += self.bike.time_step * self.bike.sigmad
-            self.rear_wheel.setPos(self.bike.getXB(), self.bike.getYB(),
-                    self.bike.r)
+            self.platform.setPos(self.bike.getXB(), self.bike.getYB())
             self.rear_wheel.setP(-self.rad2deg * self.wheel_roll)
             self.rear_wheel.setR(self.rad2deg * self.bike.getTilt())
             self.frame.setP(self.rad2deg * self.wheel_roll)
             self.butt.setX(butt_disp_w_noise)
             self.fork.setH(self.rad2deg * self.bike.getSteer())
             self.front_wheel.setP(-self.rad2deg * self.wheel_roll)
-            time.sleep(self.bike.time_step)
+            time.sleep(self.bike.time_step * self.slowdown_factor)
         else:
             time.sleep(1)
             self.bike.reset()
@@ -289,5 +226,9 @@ class Game(ShowBase):
         self.butt_displacement = 0.0
 
 if __name__ == '__main__':
-    app = Game()
+    if len(sys.argv) >= 2:
+        slowdown_factor = float(sys.argv[1])
+    else:
+        slowdown_factor = 1.0
+    app = Game(slowdown_factor=slowdown_factor)
     app.run()
