@@ -231,13 +231,14 @@ class Game(ShowBase):
                 (np.random.rand() - 1.0))
         
         # update text parameters
-        tiltstr       = "Tilt                        = %3.3f" %(self.bike.getTilt())
-        diststr      = "Distance to goal = %3.3f" %(self.task.calc_dist_to_goal())
-        rewardstr = "Reward                = %3.3f" %(self.task.getReward())
+        if hasattr(task, 'calc_dist_to_goal'):
+            tiltstr       = "Tilt                        = %3.3f" %(self.bike.getTilt())
+            diststr      = "Distance to goal = %3.3f" %(self.task.calc_dist_to_goal())
+            rewardstr = "Reward                = %3.3f" %(self.task.getReward())
         
-        self.tiltText.setText(tiltstr)
-        self.distText.setText(diststr)
-        self.rewardText.setText(rewardstr)
+            self.tiltText.setText(tiltstr)
+            self.distText.setText(diststr)
+            self.rewardText.setText(rewardstr)
         
         if self.agent and self.task:
             self.agent.integrateObservation(self.task.getObservation())
