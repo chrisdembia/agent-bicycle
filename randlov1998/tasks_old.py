@@ -118,6 +118,7 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
         # -1 reward for falling over; no reward otherwise.
         if np.abs(self.env.getTilt()) > self.max_tilt:
             return -1.0
+        return 0.0
         # TODO return -np.abs(self.env.getSensors()[0])
         
 
