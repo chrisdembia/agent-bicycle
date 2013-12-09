@@ -34,14 +34,14 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
     nactions = 9
 
     def __init__(self, butt_disturbance_amplitude=0.02, only_steer=False,
-            max_time=1000.0):
+            max_time=1000.0, randomInitState = False):
         """
         Parameters
         ----------
         butt_disturbance_amplitude : float; optional
             In meters.
         """
-        super(BalanceTask, self).__init__(Environment())
+        super(BalanceTask, self).__init__(Environment(randomInitState))
         # Keep track of time in case we want to end episodes based on number of
         # time steps.
         self._butt_disturbance_amplitude = butt_disturbance_amplitude
@@ -347,6 +347,7 @@ class LSPIGotoTask(BalanceTask):
     def __init__(self, five_actions = False, *args, **kwargs):
         BalanceTask.__init__(self, *args,**kwargs)
         self.five_actions = five_actions        
+        self.nactions = 5
         
     @property 
     def outdim(self):
