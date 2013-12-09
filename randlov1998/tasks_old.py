@@ -98,7 +98,7 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.getSensors()
+                xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         # TODO not calling superclass to do normalization, etc.
         return self.env.getSensors()[0:5]
 
@@ -191,7 +191,7 @@ class LinearFATileCoding3456BalanceTask(BalanceTask):
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.getSensors()
+                xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         # TODO not calling superclass to do normalization, etc.
         state = one_to_n(self.getBin(theta, thetad, omega, omegad, omegadd),
                 self.outdim)
@@ -218,7 +218,7 @@ class LSPIBalanceTask(BalanceTask):
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.getSensors()
+                xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         return self.getPhi(theta, thetad, omega, omegad, omegadd)
 
 
@@ -279,7 +279,7 @@ class LinearFATileCoding3456GoToTask(BalanceTask):
 
     def getObservation(self):
         (theta, thetad, omega, omegad, omegadd,
-                xf, yf, xb, yb, psi) = self.env.getSensors()
+                xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         # TODO not calling superclass to do normalization, etc.
         return one_to_n(self.getBin(theta, thetad, omega, omegad, omegadd),
                 self.outdim)
