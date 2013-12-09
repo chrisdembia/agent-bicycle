@@ -29,12 +29,12 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
     # See Randlov's code. Paper and thesis say 12 degrees, but his code uses
     # pi/15. These are actually equivalent.
     #max_tilt = 12.0 * np.pi / 180.0
-    max_tilt = np.pi / 15.0
-    #max_tilt = np.pi / 6. 
+    #max_tilt = np.pi / 15.0
+    max_tilt = np.pi / 6. 
     nactions = 9
 
     def __init__(self, butt_disturbance_amplitude=0.02, only_steer=False,
-            max_time=1000.0, randomInitState = False):
+            max_time=1000.0, randomInitState = False, x_goal = 10, y_goal=20,):
         """
         Parameters
         ----------
@@ -42,6 +42,9 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
             In meters.
         """
         super(BalanceTask, self).__init__(Environment(randomInitState))
+        self.env.x_goal = x_goal
+        self.env.y_goal = y_goal
+        
         # Keep track of time in case we want to end episodes based on number of
         # time steps.
         self._butt_disturbance_amplitude = butt_disturbance_amplitude
@@ -126,14 +129,15 @@ class GotoTask(BalanceTask):
     prescribed goal 
     """
 
-    # Goal position and raduis
-    x_goal = 1500.
-    y_goal = 1500.
-    r_goal = 10.
+    # Goal is now environment property
+    # Goal position and radius
+    #x_goal = 1500.
+    #y_goal = 1500.
+    #r_goal = 10.
 
     @property
     def outdim(self):
-        return 8
+        return 9
 
     def getObservation(self):
         # let the learner know about the front tire position and 
@@ -142,16 +146,14 @@ class GotoTask(BalanceTask):
                 xf, yf, xb, yb, psi, psig) = self.env.getSensors()
         
         # TODO not calling superclass to do normalization, etc.
-        return [ self.env.getSensors()[i] for i in [0, 1, 2, 3, 4, 5, 6, 9] ]
+        return [ self.env.getSensors()[i] for i in [0, 1, 2, 3, 4, 5, 6, 9, 10] ]
 
     def isFinished(self):
         # Criterion for ending an episode.
         # When the agent reaches the goal, the task is considered learned.
         # When the agent falls down, the episode is over.
         dist_to_goal = self.calc_dist_to_goal()
-        heading = self.calc_angle_to_goal()
-        heading2 = self.env.getPsi()
-
+        
         if np.abs(self.env.getTilt()) > self.max_tilt:
             print 'distance to goal ', dist_to_goal
             return True
@@ -184,9 +186,9 @@ class GotoTask(BalanceTask):
         # code.
 
         # unpack variables
-        x_goal = self.x_goal
-        y_goal = self.y_goal
-        r_goal = self.r_goal
+        x_goal = self.env.x_goal
+        y_goal = self.env.y_goal
+        r_goal = self.env.r_goal
         xf = self.env.getXF()
         yf = self.env.getYF()
 
@@ -223,8 +225,8 @@ class GotoTask(BalanceTask):
         # currently being used.
 
         # unpack variables
-        x_goal = self.x_goal
-        y_goal = self.y_goal
+        x_goal = self.env.x_goal
+        y_goal = self.env.y_goal
         xf = self.env.getXF()
         xb = self.env.getXB()
         yf = self.env.getYF()
@@ -344,8 +346,10 @@ class LSPIGotoTask(BalanceTask):
     """Lagoudakis, 2002, trying to implement the balance + goto task
     """
         
-    def __init__(self, five_actions = False, rewardType = 1,*args, **kwargs):
+    def __init__(self, five_actions = False, rewardType = 1, *args, **kwargs):
         BalanceTask.__init__(self, *args,**kwargs)
+        #self.env.x_goal = x_goal
+        #self.env.y_goal = y_goal
         self.five_actions = five_actions
         if self.five_actions :
             self.nactions = 5
@@ -434,7 +438,7 @@ class LSPIGotoTask(BalanceTask):
         if self.rewardType == 2 :
             # proportional reward
             if np.abs(self.env.getTilt()) > self.max_tilt:
-                return -1000
+                return -1
                 
             dist_to_goal = self.calc_dist_to_goal()
             if dist_to_goal == 0:
@@ -442,10 +446,10 @@ class LSPIGotoTask(BalanceTask):
             # range [0.1856 - 1]
             tiltReward = 1/((10*self.env.getTilt())**2 + 1)
             # ~0.1 to ~1
-            distReward = 10/dist_to_goal
+            distReward = 10/dist_to_goal + 1
             headingReward = 5/((10*self.env.getPSIG())**2 + 1)
             #print tiltReward, distReward, headingReward
-            return tiltReward + distReward + headingReward   
+            return tiltReward + 0.1*distReward + 0.01*headingReward
     
     def calc_last_dist_to_goal(self):
         x_goal = self.env.x_goal
@@ -475,16 +479,15 @@ class LSPIGotoTask(BalanceTask):
 
         return np.sqrt(temp)    
         
-        
 class LinearFATileCoding3476GoToTask(BalanceTask):
     """An attempt to exactly implement Randlov's function approximation. He
     discretized (tiled) the input space into 3476 (3456 balance states + 20 
     heading states) tiles.
     """
     # Goal position and radius
-    x_goal = 5.
-    y_goal = 20.
-    r_goal = 10.
+    #x_goal = 5.
+    #y_goal = 20.
+    #r_goal = 10.
     max_distance = 1000
 
     # From Randlov, 1998:
@@ -555,7 +558,7 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         top_half =  one_to_n(self.getBin(theta, thetad, omega, omegad, omegadd),
                 self.outdim - 20)
     
-        bot_half = one_to_n(np.digitize([psi], self.psi_bounds)[0] - 1, 20)
+        bot_half = one_to_n(np.digitize([psig], self.psi_bounds)[0] - 1, 20)
 
         return np.concatenate((top_half,bot_half))
 
@@ -584,7 +587,8 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
         # -1    reward for falling over
         #  0.01 reward for close to goal
         #  return reward inversely proportional to heading error otherwise
-        
+        psig = self.env.getPSIG()
+                
         r_factor = 0.01
         rh_factor = 0.00001
 
@@ -592,7 +596,7 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
             return -1.0
         else:
             distance = self.calc_dist_to_goal()
-            heading = self.calc_angle_to_goal()
+            #heading = self.calc_angle_to_goal()
             if (distance > self.max_distance):
                 print 'MAX DISTANCE REACHED'
                 return -1.0
@@ -600,23 +604,26 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
                 print 'DEBUG: GOAL REACHED'
                 return 0.01
             else:
+                # reward from Randlov's 1998 paper
+                return (4 - psig**2) * 0.00004
+                
+                # reward from Randlov's C code
                 #return (0.95 - heading**2) * r_factor
-                # TODO, add a reward that is 
-                # inversly proportional to distance 
-                heading_reward = 0.1/(heading**2 + 0.1) * r_factor
-                dist_reward = -distance**2 * rh_factor
+                
+                # our own proportional reward function
+                #heading_reward = 0.1/(heading**2 + 0.1) * r_factor
+                #dist_reward = -distance**2 * rh_factor
                 #return 0.1/(heading**2 + 0.1) * r_factor
                 #return heading_reward + dist_reward
-                return 1/distance
 
     def calc_dist_to_goal(self):
         # ported from Randlov's C code. See bike.c for the source
         # code.
 
         # unpack variables
-        x_goal = self.x_goal
-        y_goal = self.y_goal
-        r_goal = self.r_goal
+        x_goal = self.env.x_goal
+        y_goal = self.env.y_goal
+        r_goal = self.env.r_goal
         xf = self.env.getXF()
         yf = self.env.getYF()
 

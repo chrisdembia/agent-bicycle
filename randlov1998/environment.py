@@ -54,7 +54,7 @@ class Environment(GraphicalEnvironment):
     Itot = 13.0 / 3.0 * Mc * h**2 + Mp * (h + dCM)**2
     sigmad = v / r
 
-    def __init__(self, randomInitState):
+    def __init__(self, randomInitState=False):
         GraphicalEnvironment.__init__(self)
         self.randomInitState = randomInitState
         self.reset()

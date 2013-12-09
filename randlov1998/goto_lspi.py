@@ -6,14 +6,17 @@ from environment import Environment
 from tasks import LSPIGotoTask
 from training import LinearFATraining
 
-task = LSPIGotoTask(butt_disturbance_amplitude = 0.0000, randomInitState = True, five_actions = True,  rewardType = 1)
-learner = LSPI(task.nactions, task.outdim)
+x_g = 10
+y_g = 30
+
+task = LSPIGotoTask(butt_disturbance_amplitude = 0.0000, randomInitState = False, five_actions = True,  rewardType = 1, x_goal = x_g, y_goal = y_g)
+learner = LSPI(task.nactions, task.outdim, randomInit = False)
 
 # TODO this LSPI does not have eligibility traces.
 #learner._lambda = 0.95
 
 # lagoudakis uses 0.8 discount factor
-learner.rewardDiscount = 0.80
+learner.rewardDiscount = 0.8
 task.discount = learner.rewardDiscount
 
 agent = LinearFA_Agent(learner)
@@ -31,7 +34,7 @@ experiment = EpisodicExperiment(task, agent)
 # TODO PyBrain says that the learning rate needs to decay, but I don't see that
 # described in Randlov's paper.
 # A higher number here means the learning rate decays slower.
-learner.learningRateDecay = 800
+learner.learningRateDecay = 300
 # NOTE increasing this number above from the default of 100 is what got the
 # learning to actually happen, and fixed the bug/issue where the performance
 # agent's performance stopped improving.

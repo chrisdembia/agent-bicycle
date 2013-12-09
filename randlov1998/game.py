@@ -163,6 +163,10 @@ class Game(ShowBase):
         self.butt.setZ(1.5 * self.bike.r)
         self.butt.setY(0.3 * self.bike.L)
 
+        self.goalPost = self.loader.loadModel("fork.egg")
+        self.goalPost.reparentTo(self.render)
+        self.goalPost.setPos(self.bike.x_goal,self.bike.y_goal, self.bike.r)
+                                
         self.fork = self.loader.loadModel("fork.egg")
         self.fork.reparentTo(self.frame)
         self.fork.setColor(0, 0, 1)
@@ -231,9 +235,9 @@ class Game(ShowBase):
                 (np.random.rand() - 1.0))
         
         # update text parameters
-        tiltstr       = "Tilt                        = %3.3f" %(self.bike.getTilt())
-        diststr      = "Distance to goal = %3.3f" %(self.task.calc_dist_to_goal())
-        rewardstr = "Reward                = %3.3f" %(self.task.getReward())
+        tiltstr       = "Tilt                        = %3.6f" %(self.bike.getTilt())
+        diststr      = "Distance to goal = %3.6f" %(self.task.calc_dist_to_goal())
+        rewardstr = "Reward                = %3.6f" %(self.task.getReward())
         
         self.tiltText.setText(tiltstr)
         self.distText.setText(diststr)
