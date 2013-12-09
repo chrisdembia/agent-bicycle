@@ -95,7 +95,8 @@ class Training:
     def train(self, n_max_rehearsals, do_plot=True, performance_interval=10,
             n_performance_episodes=5, serialization_interval=10,
             n_episodes_per_rehearsal=1, plotsave_interval=100,
-            plot_action_history=False, plot_rehearsal_trajectory=False):
+            plot_action_history=False, plot_rehearsal_trajectory=False,
+            plot_goal_circle=True):
         """Training consists of a loop of (1) rehearsing, (2) plotting the
         reward and bicycle wheel trajectory, and (3) writing output to a file
         (including the learner; e.g., weights).
@@ -148,7 +149,7 @@ class Training:
             plt.suptitle(self.name, fontweight='bold')
             if (hasattr(self.exp.task.env, 'x_goal') and
                     hasattr(self.exp.task.env, 'y_goal') and
-                    hasattr(self.exp.task.env, 'r_goal')):
+                    hasattr(self.exp.task.env, 'r_goal') and plot_goal_circle):
                 plt.subplot(1, nplots, 2)
                 t = linspace(0, 2 * pi, 100)
                 r = self.exp.task.env.r_goal
