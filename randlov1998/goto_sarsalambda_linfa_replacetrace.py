@@ -29,7 +29,7 @@ task.env.time_step = 0.02
 # creating a modified SARSALambda learner, which applies a reduced rate to the
 # heading states
 learner = SARSALambda_LinFA_setAlpha(reduced_rate, num_states_1, task.nactions, task.outdim, randomInit=False)
-task.only_balance = True
+#task.only_balance = True
 learner._lambda = 0.95
 
 task.discount = learner.rewardDiscount
@@ -49,7 +49,7 @@ experiment = EpisodicExperiment(task, agent)
 # described in Randlov's paper.
 # A higher number here means the learning rate decays slower.
 
-learner.learningRateDecay = 1000
+learner.learningRateDecay = 2500
 
 # NOTE increasing this number above from the default of 100 is what got the
 # learning to actually happen, and fixed the bug/issue where the performance
@@ -58,4 +58,4 @@ learner.learningRateDecay = 1000
 tr = LinearFATraining_setAlpha('goto_sarsalambda_linfa_replacetrace',
         experiment, performance_agent, verbose=True)
 
-tr.train(2000, performance_interval=10, n_performance_episodes=1)
+tr.train(20000, performance_interval=10, n_performance_episodes=1)

@@ -42,9 +42,9 @@ class BalanceTask(pybrain.rl.environments.EpisodicTask):
         butt_disturbance_amplitude : float; optional
             In meters.
         """
-        super(BalanceTask, self).__init__(Environment(randomInitState))
-        self.env.x_goal = x_goal
-        self.env.y_goal = y_goal
+        super(BalanceTask, self).__init__(Environment(randomInitState, x_goal, y_goal))
+        #self.env.x_goal = x_goal
+        #self.env.y_goal = y_goal
         
         # Keep track of time in case we want to end episodes based on number of
         # time steps.
@@ -507,7 +507,7 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
             [-np.inf, -0.5, -0.25, 0, 0.25, 0.5, np.inf])
     omegadd_bounds = np.array(
             [-np.inf, -2.0, 0, 2.0, np.inf])
-    psi_bounds = (np.pi/180) * np.array( range(0,360,18) )
+    psi_bounds = (np.pi/180) * np.array( range(-180,180,18) )
 
     # http://stackoverflow.com/questions/3257619/numpy-interconversion-between-multidimensional-and-linear-indexing
     nbins_across_dims = [ 
@@ -610,16 +610,19 @@ class LinearFATileCoding3476GoToTask(BalanceTask):
                 return 0.01
             else:
                 # reward from Randlov's 1998 paper
-                return (4 - psig**2) * 0.00004
+                r1 = (4 - psig**2) * .00004
+                #return (4 - psig**2) * 0.00004
                 
                 # reward from Randlov's C code
                 #return (0.95 - heading**2) * r_factor
                 
                 # our own proportional reward function
+                r2 =  -np.abs(self.env.getSensors()[0])
                 #heading_reward = 0.1/(heading**2 + 0.1) * r_factor
                 #dist_reward = -distance**2 * rh_factor
                 #return 0.1/(heading**2 + 0.1) * r_factor
                 #return heading_reward + dist_reward
+                return r1
 
     def calc_dist_to_goal(self):
         # ported from Randlov's C code. See bike.c for the source

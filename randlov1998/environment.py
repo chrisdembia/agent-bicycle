@@ -19,8 +19,6 @@ class Environment(GraphicalEnvironment):
     
     # Goal position and radius
     # Lagouakis (2002) uses angle to goal, not heading, as a state
-    x_goal = 10.
-    y_goal = 20.
     r_goal = 5.
     max_distance = 1000.
     
@@ -54,8 +52,10 @@ class Environment(GraphicalEnvironment):
     Itot = 13.0 / 3.0 * Mc * h**2 + Mp * (h + dCM)**2
     sigmad = v / r
 
-    def __init__(self, randomInitState=False):
+    def __init__(self, randomInitState, x_goal, y_goal):
         GraphicalEnvironment.__init__(self)
+        self.x_goal = x_goal
+        self.y_goal = y_goal
         self.randomInitState = randomInitState
         self.reset()
         self.actions = [0.0, 0.0]
