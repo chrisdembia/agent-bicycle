@@ -54,17 +54,12 @@ class Environment(GraphicalEnvironment):
     Itot = 13.0 / 3.0 * Mc * h**2 + Mp * (h + dCM)**2
     sigmad = v / r
 
-    def __init__(self, randomInitState):
+    def __init__(self, randomInitState=False):
         GraphicalEnvironment.__init__(self)
         self.randomInitState = randomInitState
         self.reset()
         self.actions = [0.0, 0.0]
-        self.fid = open('record.txt', 'w')
-        self.fid.write('theta thetad omega omegad xb yb T d\n')
         self._save_wheel_contact_trajectories = False
-
-    def __del__(self):
-        self.fid.close()
 
     def getSteer(self):
         return self.sensors[0]
