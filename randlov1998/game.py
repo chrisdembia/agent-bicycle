@@ -21,25 +21,33 @@ from tasks import BalanceTask
 # TODO implement butt movement (d control).
 # TODO flashy environment.
 # TODO more colorful bike objects (how come we can't set their color?).
- 
+
 class Game(ShowBase):
 
     rad2deg = 180. / 3.14
     def __init__(self, agent=None, task=None, noise_mag=0.02,
+            show_learning=False,
             slowdown_factor=1.0):
         ShowBase.__init__(self)
 
+        self.show_learning = show_learning
+        if self.show_learning:
+            self.theta_counter = 0
+            self.theta_index = 0
         self.slowdown_factor = slowdown_factor
-        
-        # add some text 
-        self.title = OnscreenText(text="Test",
-                              style=1, fg=(1,1,1,1),
-                              pos=(0.9,-0.95), scale = .07)
-                              
+        self.elapsed_time = 0
+
+        # add some text
+        #self.title = OnscreenText(text="Test",
+        #                      style=1, fg=(1,1,1,1),
+        #                      pos=(0.9,-0.95), scale = .07)
+
         self.tiltText = self.genLabelText("Bike tilt", 1)
         self.distText = self.genLabelText("Distance to goal", 2)
         self.rewardText = self.genLabelText("Current reward", 3)
-        
+        if self.show_learning:
+            self.thetaText = self.genLabelText("After 0 episodes...", 10, scale=0.10)
+
         self.agent = agent
         self.noise_mag = noise_mag
         if task:
@@ -56,7 +64,7 @@ class Game(ShowBase):
         self.wheel_roll = 0
         self.torque = 0
         self.butt_displacement = 0
- 
+
         # Load the environment model.
         #self.environ = self.loader.loadModel("models/environment")
         self.environ = self.loader.loadModel("Ground2.egg")
@@ -80,12 +88,8 @@ class Game(ShowBase):
 #        self.axes.reparentTo(self.render)
 #        self.axes.setPos(-0, 0, 0)
 
-        self.platform = self.loader.loadModel("frame.egg")
-        self.platform.reparentTo(self.render)
-        self.platform.setColor(1, 0, 0)
-
         self.rear_wheel = self.loader.loadModel("wheel3.egg")
-        self.rear_wheel.reparentTo(self.platform)
+        self.rear_wheel.reparentTo(self.render)
         self.rear_wheel.setPos(0, 0, self.bike.r)
 
         self.frame = self.loader.loadModel("frame.egg")
@@ -103,7 +107,7 @@ class Game(ShowBase):
         self.goalPost = self.loader.loadModel("fork.egg")
         self.goalPost.reparentTo(self.render)
         self.goalPost.setPos(self.bike.x_goal,self.bike.y_goal, 0)
-                                
+
         self.fork = self.loader.loadModel("fork.egg")
         self.fork.reparentTo(self.frame)
         self.fork.setColor(0, 0, 1)
@@ -134,13 +138,13 @@ class Game(ShowBase):
         self.torqueRightIndicator.hide()
 
 #        self.accept('mouse1', self.printHello)
-        
+
         self.accept('arrow_right', self.torqueRight)
         # When the key is released (lifted 'up').
         self.accept('arrow_right-up', self.noTorque)
         self.accept('arrow_left', self.torqueLeft)
         self.accept('arrow_left-up', self.noTorque)
-        
+
         self.accept('d', self.buttRight)
         self.accept('d-up', self.noButt)
         self.accept('a', self.buttLeft)
@@ -150,38 +154,54 @@ class Game(ShowBase):
 
     # Define a procedure to move the camera.
     def followBikeTask(self, task):
-        look = self.platform.getPos()
-        self.camera.lookAt(look[0], look[1], look[2] + 1.3)
-        self.camera.setPos(look[0] - 1.0, look[1] - 6.0, look[2] + 2.3)
-    
+        look = self.rear_wheel.getPos()
+        self.camera.lookAt(look[0], look[1], look[2] + 1.0)
+        self.camera.setPos(look[0] - 1.0, look[1] - 6.0, look[2] + 2.0)
+
         #self.camera.setPos(*self.rear_wheel.getPos())
         return Task.cont
 
     def printHello(self):
         print "hello"
-    
+
     #Macro-like function used to reduce the amount to code needed to create the
     #on screen instructions
-    def genLabelText(self, text, i):
+    def genLabelText(self, text, i, scale=None):
+        if scale == None:
+            scale = 0.05
         textObject = OnscreenText(text = text, pos = (-1.3, .95-.05*i), fg=(1,1,0,1),
-                      align = TextNode.ALeft, scale = .05)
+                      align = TextNode.ALeft, scale = scale)
         return textObject
-                      
+
+    def set_theta_to_next_file(self):
+        self.theta_counter += 3
+        self.theta_index = (self.theta_counter % 21) * 100
+        theta = np.loadtxt('balance_thetas/theta_%i.dat' % self.theta_index)
+        self.agent.learner._theta = theta
+
     def simulateBicycleTask(self, task):
         butt_disp_w_noise = self.butt_displacement + self.noise_mag * (2.0 *
                 (np.random.rand() - 1.0))
-        
+
         # update text parameters
         if self.task.goto:
-            diststr      = "Distance to goal    = %3.3f" %(self.task.calc_dist_to_goal())            
+            diststr      = "Distance to goal    = %3.3f" %(self.task.calc_dist_to_goal())
         else:
-            diststr      = "Distance traveled = "            
+            diststr      = "Elapsed time        = %3.3f" % (self.elapsed_time)
         tiltstr       = "Tilt                           = %3.3f" %(self.bike.getTilt())
         rewardstr = "Reward                   = %3.3f" %(self.task.getReward())
         self.tiltText.setText(tiltstr)
         self.distText.setText(diststr)
         self.rewardText.setText(rewardstr)
-        
+        if self.show_learning:
+            thetastr     = "After %i episodes..." % self.theta_index
+            self.thetaText.setText(thetastr)
+
+        self.elapsed_time += self.bike.time_step
+        if self.show_learning and self.elapsed_time > 7.0:
+            self.elapsed_time = 0
+            self.set_theta_to_next_file()
+            self.bike.reset()
         if self.agent and self.task:
             self.agent.integrateObservation(self.task.getObservation())
             self.task.performAction(self.agent.getAction())
@@ -191,7 +211,7 @@ class Game(ShowBase):
             self.bike.step()
         if abs(self.bike.getTilt()) < BalanceTask.max_tilt:
             self.wheel_roll += self.bike.time_step * self.bike.sigmad
-            self.platform.setPos(self.bike.getXB(), self.bike.getYB())
+            self.rear_wheel.setPos(self.bike.getXB(), self.bike.getYB(), self.bike.r)
             self.rear_wheel.setP(-self.rad2deg * self.wheel_roll)
             self.rear_wheel.setR(self.rad2deg * self.bike.getTilt())
             self.frame.setP(self.rad2deg * self.wheel_roll)
@@ -202,6 +222,9 @@ class Game(ShowBase):
         else:
             time.sleep(1)
             self.bike.reset()
+            self.elapsed_time = 0
+            if self.show_learning:
+                self.set_theta_to_next_file()
         return Task.cont
 
     def torqueRight(self):
