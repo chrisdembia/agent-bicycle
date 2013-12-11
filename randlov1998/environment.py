@@ -26,6 +26,7 @@ class Environment(GraphicalEnvironment):
     last_xf = 0
     last_yf = 0
     last_omega = 0
+    last_psig = 0
 
     # Acceleration on Earth's surface due to gravity (m/s^2):
     g = 9.82
@@ -112,6 +113,7 @@ class Environment(GraphicalEnvironment):
         # -----------------------------
         # Want to ignore the previous value of omegadd; it could only cause a
         # bug if we assign to it.
+        
         (theta, thetad, omega, omegad, _,
                 xf, yf, xb, yb, psi, psig) = self.sensors
         (T, d) = self.actions
@@ -120,6 +122,7 @@ class Environment(GraphicalEnvironment):
         self.last_xf = xf
         self.last_yf = yf
         self.last_omega = omega
+        self.last_psig = psig
         
         # For recordkeeping.
         # ------------------

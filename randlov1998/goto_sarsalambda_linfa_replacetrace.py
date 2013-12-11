@@ -3,7 +3,7 @@ from pybrain.rl.agents.linearfa import LinearFA_Agent
 from pybrain.rl.experiments import EpisodicExperiment
 
 from environment import Environment
-from tasks import LinearFATileCoding3476GoToTask
+from tasks import LinearFATileCoding3476GoToTask_Reward1
 from training import LinearFATraining_setAlpha
 from learners import SARSALambda_LinFA_setAlpha
 
@@ -17,12 +17,12 @@ reduced_rate = 0.25
 # number of states for the balancing task only
 num_states_1 = 3456
 
-x_g = 10.
+x_g = 20.
 y_g = 50.
 
 # this task should now include 20 discretized heading states
 # it also uses the same reward function as in Randlov 1998
-task = LinearFATileCoding3476GoToTask(butt_disturbance_amplitude = 0.005, max_time=1000.,x_goal = x_g, y_goal = y_g)
+task = LinearFATileCoding3476GoToTask_Reward1(butt_disturbance_amplitude = 0.005, max_time=1000.,x_goal = x_g, y_goal = y_g, c = 0.1)
 
 task.env.time_step = 0.02
 
@@ -55,7 +55,7 @@ learner.learningRateDecay = 2500
 # learning to actually happen, and fixed the bug/issue where the performance
 # agent's performance stopped improving.
 
-tr = LinearFATraining_setAlpha('goto_sarsalambda_linfa_replacetrace',
+tr = LinearFATraining_setAlpha('goto_sarsalambda_linfa_replacetrace_Reward1_c=0.2_FartherTarget',
         experiment, performance_agent, verbose=True)
 
 tr.train(20000, performance_interval=10, n_performance_episodes=1)

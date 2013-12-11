@@ -299,8 +299,8 @@ class LinearFATraining(Training):
     def __del__(self):
         self.thetafile.close()
     def rehearse(self, irehearsal, n_episodes_per_rehearsal):
-        if self.exp.agent.learner.learningRate < 0.002:
-            raise Exception('Learning rate hit 0.002. Aborting.')
+        if self.exp.agent.learner.learningRate < 0.0005:
+            raise Exception('Learning rate is very small. Aborting.')
         r = self.exp.doEpisodes(n_episodes_per_rehearsal)
         if self.batch: self.exp.agent.learn()
         # Discounted reward/return (I think):
@@ -320,8 +320,8 @@ class LinearFATraining_setAlpha(LinearFATraining):
     def rehearse(self, irehearsal, n_episodes_per_rehearsal):
         # simply modified  from LinearFATraining to print the reduced_rate 
         # learning rate parameter
-        if self.exp.agent.learner.learningRate < 0.002:
-            raise Exception('Learning rate hit 0.002. Aborting.')
+        if self.exp.agent.learner.learningRate < 0.0005:
+            raise Exception('Learning rate is very small. Aborting.')
         r = self.exp.doEpisodes(n_episodes_per_rehearsal)
         # Discounted reward/return (I think):
         cumreward = self.exp.task.getTotalReward()

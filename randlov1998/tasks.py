@@ -717,3 +717,54 @@ class Proportional3456ControlBalanceTask(LinearFATileCoding3456BalanceTask):
             return -1.0
             
         return -np.abs(self.env.getSensors()[0])
+        
+class LinearFATileCoding3476GoToTask_Reward1(LinearFATileCoding3476GoToTask):
+
+     def __init__(self,c = 1.0, *args, **kwargs):
+        LinearFATileCoding3476GoToTask.__init__(self, *args,**kwargs)
+        self.c = c
+        print self.c
+    
+     def getReward(self):
+        
+        x = np.abs(self.env.getTilt())
+        PrevTilt = np.abs(self.env.last_omega)
+        max_tilt = LinearFATileCoding3456BalanceTask.max_tilt
+        y = np.abs(self.env.getPSIG())
+        PrevPsiG = np.abs(self.env.last_psig)
+        max_PsiG = np.pi/2.0
+        
+        if x<1.0/3*max_tilt:
+            R1 = 5.0
+        elif 1.0/3*max_tilt<=x and x<=2.0/3*max_tilt:
+            R1 = 1.0
+        elif 2.0/3*max_tilt<=x and x<=max_tilt:
+            R1 = -5.0
+        elif x>max_tilt:
+            R1 = -15.0
+        if PrevTilt>x:
+            R1 += 5000.0*(PrevTilt-x)
+            #if PrevTilt>2.0/3*max_tilt:
+                #R1 *= 2
+        if PrevTilt<x:
+            R1 += 3000.0*(PrevTilt-x)
+            
+            
+        if y<1.0/3*max_PsiG:
+            R2 = 5.0
+        elif 1.0/3*max_PsiG<=y and y<=2.0/3*max_PsiG:
+            R2 = 1.0
+        elif 2.0/3*max_PsiG<=y and y<=max_PsiG:
+            R2 = -5.0
+        elif y>max_PsiG:
+            R2 = -15.0
+        if PrevPsiG>y:
+            R2 += 5000.0*(PrevPsiG-y)
+            #if PrevPsiG>2.0/3*max_PsiG:
+                #R2 *= 2
+        if PrevPsiG<y:
+            R2 += 3000.0*(PrevPsiG-y)
+            
+        R = R1 + self.c*R2
+        
+        return R
